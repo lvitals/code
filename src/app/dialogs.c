@@ -283,7 +283,8 @@ draw_gotofile(void)
 }
 
 
-/* before a folder of the file picker goes to the Trash (Del, [Trash]) */
+/* before a folder or a file of the file picker goes to the Trash (Del,
+   [Trash]) */
 void
 draw_trash(void)
 {
@@ -291,7 +292,7 @@ draw_trash(void)
 	const char *msg[2];
 	int r;
 
-	strcpy(line, "Move the folder \"");
+	strcpy(line, file_kind(st.trash) == 2 ? "Move the folder \"" : "Move the file \"");
 	strcat(line, path_last(st.trash));
 	strcat(line, "\" to the Trash?");
 	msg[0] = line;

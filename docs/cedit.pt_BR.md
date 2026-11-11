@@ -369,24 +369,25 @@ mesmo jeito, com dois botões embaixo:
   Enter cria a pasta dentro da pasta mostrada e entra nela; Esc volta ao
   que estava no campo.  No Save As o nome de arquivo digitado antes é
   mantido, para salvar na pasta nova em seguida.
-- **Trash (Del)**: move a pasta escolhida na lista para a Lixeira,
+- **Trash (Del)**: move a pasta ou o arquivo escolhido na lista para a
+  Lixeira,
   depois de uma confirmação (Yes, No).  O Del funciona na lista, ou no
   campo quando nada foi digitado (senão o Del edita o texto).
 
 A Lixeira é a do próprio desktop (a especificação Trash do
 freedesktop.org): `~/.local/share/Trash` (ou `$XDG_DATA_HOME/Trash`)
-para pastas no mesmo disco da pasta pessoal; senão `.Trash-UID` no topo
-do outro disco.  As pastas movidas aparecem na Lixeira do Arquivos do
+para o que está no mesmo disco da pasta pessoal; senão `.Trash-UID` no
+topo do outro disco.  As pastas e os arquivos movidos aparecem na Lixeira do Arquivos do
 GNOME, do Dolphin, do Thunar, do Caja e do Nemo, e podem ser
-restauradas de lá.  A pasta é movida, nunca copiada nem apagada.  O
+restauradas de lá.  O que é movido é renomeado, nunca copiado nem apagado.  O
 próprio editor faz isso (POSIX: `rename`, `mkdir`, o `.trashinfo`
-gravado), sem biblioteca de desktop nenhuma; num sistema sem desktop as
-pastas ficam guardadas nessa pasta do mesmo jeito.  No macOS a Lixeira
+gravado), sem biblioteca de desktop nenhuma; num sistema sem desktop eles
+ficam guardados nessa pasta do mesmo jeito.  No macOS a Lixeira
 é a do Finder: `~/.Trash` (`.Trashes/UID` em outro disco).
 
 Não são movidas, com o motivo informado: a pasta do projeto (ou uma
-pasta que a contém), a pasta pessoal e uma pasta com um arquivo aberto
-no editor.
+pasta que a contém), a pasta pessoal, uma pasta com um arquivo aberto
+no editor e um arquivo aberto no editor.
 
 ### Como os arquivos são salvos
 
@@ -687,7 +688,7 @@ escape").
 | Ctrl+W | Close File |
 | Ctrl+Q | Exit |
 | Alt+N (no Open, Save As, Open Project Folder) | New Folder (pasta nova) |
-| Del (nos mesmos, na lista) | Move a pasta para a Lixeira |
+| Del (nos mesmos, na lista) | Move a pasta ou o arquivo para a Lixeira |
 
 ### Edição
 
@@ -751,7 +752,7 @@ escape").
 | `XCEDIT_SNAPSHOT=arquivo.ppm` | Testes: o xcedit grava cada quadro como imagem |
 | `XCEDIT_TRACE=arquivo` | Testes: o xcedit grava cada evento que recebe |
 | `.gitignore`, `.ignore`, `.git/info/exclude` | Arquivos deixados de fora das buscas do projeto |
-| `$XDG_DATA_HOME/Trash` (`~/.local/share/Trash`), `.Trash-UID` | A Lixeira para onde as pastas são movidas |
+| `$XDG_DATA_HOME/Trash` (`~/.local/share/Trash`), `.Trash-UID` | A Lixeira para onde as pastas e os arquivos são movidos |
 
 ### Código de saída
 

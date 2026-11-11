@@ -7,8 +7,8 @@
  *
  * In the three, the folders are managed alike: Alt+N or [New Folder]
  * asks for a name in the field (Enter makes the folder and goes into it,
- * Esc does not), Del or [Trash] moves the folder chosen to the Trash of
- * the desktop, asked first (dialogs.c: draw_trash). */
+ * Esc does not), Del or [Trash] moves the folder or the file chosen to
+ * the Trash of the desktop, asked first (dialogs.c: draw_trash). */
 #include <stdlib.h>
 #include <string.h>
 #include "finder.h"
@@ -449,7 +449,7 @@ within(const char *path, const char *dir)
 	return strncmp(path, dir, n) == 0 && (path[n] == 0 || path[n] == path_sep);
 }
 
-/* a folder that is not to go to the Trash: said, and 1 */
+/* a folder or a file that is not to go to the Trash: said, and 1 */
 static int
 trash_refused(const char *path)
 {
@@ -457,6 +457,14 @@ trash_refused(const char *path)
 	const char *home = getenv("HOME");
 	struct doc *d;
 
+	if(file_kind(path) != 2) {	/* a file: not one open */
+		for(d = docs; d; d = d->next)
+			if(d->path && strcmp(d->path, path) == 0) {
+				error("The file is open in the editor: ", path);
+				return 1;
+			}
+		return 0;
+	}
 	plat_cwd(cwd, sizeof cwd);
 	if(within(cwd, path)) {
 		error("The project's folder is in it: ", path);
@@ -474,16 +482,17 @@ trash_refused(const char *path)
 	return 0;
 }
 
-/* Del, [Trash]: the folder name (of the one shown) to the Trash, once
- * Yes is said */
+/* Del, [Trash]: the folder (name/) or the file name, of the one shown, to
+ * the Trash, once Yes is said */
 static void
 trash_ask(const char *name)
 {
 	char path[PATH_MAX_ + 2];
 	size_t n = name ? strlen(name) : 0;
 
-	if(n < 2 || name[n - 1] != path_sep || strcmp(name, "..") == 0) {
-		error("Choose a folder in the list to move to the Trash", 0);
+	if(n == 0 || strcmp(name, "..") == 0 || strcmp(name, "../") == 0 ||
+	   (n == 1 && name[0] == path_sep)) {
+		error("Choose a folder or a file in the list to move to the Trash", 0);
 		return;
 	}
 	path_join(path, st.pdir, name);

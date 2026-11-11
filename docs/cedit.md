@@ -368,24 +368,25 @@ way, with two buttons at the bottom:
   folder:").  Enter makes it in the folder shown and goes into it; Esc
   goes back to what was there.  In Save As the file name typed before is
   kept, so the file can be saved in the new folder at once.
-- **Trash (Del)**: moves the folder chosen in the list to the Trash,
+- **Trash (Del)**: moves the folder or the file chosen in the list to
+  the Trash,
   after a confirmation (Yes, No).  Del works on the list, or in the
   field when nothing is typed (otherwise Del edits the text).
 
 The Trash is the desktop's own (the freedesktop.org Trash
 specification): `~/.local/share/Trash` (or `$XDG_DATA_HOME/Trash`) for
-folders on the same disk as the home, else `.Trash-UID` at the top of
-the other disk.  The folders moved there show in the Trash of GNOME
-Files, Dolphin, Thunar, Caja and Nemo, and can be restored from it.  A
-folder is moved, never copied nor deleted.  The editor does it itself
+what is on the same disk as the home, else `.Trash-UID` at the top of
+the other disk.  The folders and files moved there show in the Trash of GNOME
+Files, Dolphin, Thunar, Caja and Nemo, and can be restored from it.  What
+is moved is renamed, never copied nor deleted.  The editor does it itself
 (POSIX: `rename`, `mkdir`, the `.trashinfo` written), with no library of
-a desktop; on a system without a desktop the folders wait in that
+a desktop; on a system without a desktop they wait in that
 folder all the same.  On macOS the Trash is the Finder's: `~/.Trash`
 (`.Trashes/UID` on another disk).
 
 Not moved, with the reason shown: the project folder (or a folder that
-contains it), the home folder, and a folder with a file open in the
-editor.
+contains it), the home folder, a folder with a file open in the
+editor, and a file open in the editor.
 
 ### How files are saved
 
@@ -682,7 +683,7 @@ enabled ("meta sends escape").
 | Ctrl+W | Close File |
 | Ctrl+Q | Exit |
 | Alt+N (in Open, Save As, Open Project Folder) | New Folder |
-| Del (in the same, on the list) | Move the folder to the Trash |
+| Del (in the same, on the list) | Move the folder or the file to the Trash |
 
 ### Editing
 
@@ -746,7 +747,7 @@ enabled ("meta sends escape").
 | `XCEDIT_SNAPSHOT=file.ppm` | Testing: xcedit writes each frame as an image |
 | `XCEDIT_TRACE=file` | Testing: xcedit writes each event it receives |
 | `.gitignore`, `.ignore`, `.git/info/exclude` | Files left out of the project searches |
-| `$XDG_DATA_HOME/Trash` (`~/.local/share/Trash`), `.Trash-UID` | The Trash folders are moved to |
+| `$XDG_DATA_HOME/Trash` (`~/.local/share/Trash`), `.Trash-UID` | The Trash folders and files are moved to |
 
 ### Exit status
 
