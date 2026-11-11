@@ -28,6 +28,23 @@ make clean
 pthreads: `-pthread`, which alefc takes too);
 `xcedit` also GLFW 3, OpenGL and the stb headers (`/usr/include/stb`).
 
+The packages, on Arch Linux:
+
+```
+sudo pacman -S --needed base-devel glfw libglvnd mesa stb pkgconf
+```
+
+On Debian (and Ubuntu):
+
+```
+sudo apt install build-essential libglfw3-dev libgl-dev libgl1-mesa-dri libstb-dev pkgconf
+```
+
+For `cedit` alone (`make cedit`) the compiler is enough: `base-devel` on
+Arch, `build-essential` on Debian.  `xcedit` takes more memory than
+`cedit` (the OpenGL drivers, and on GNOME Wayland the title bar's GTK);
+`cedit` is the lighter one, in a terminal.
+
 The window has a zoom: Ctrl and + or - (or the wheel), Ctrl+0 as it was,
 and View > Zoom In, Zoom Out, Reset Zoom; its size is kept in the settings
 (`"font_size"`).  It draws a frame in a few calls: the characters are in
