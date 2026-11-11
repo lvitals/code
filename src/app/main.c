@@ -438,6 +438,13 @@ app_action(int a)
 	case A_ABOUT:
 		st.wants_about = 1;
 		return;
+	case A_PREFS:	/* opens the settings as a document: none needed before */
+		settings_open();
+		return;
+	case A_ZOOMIN: case A_ZOOMOUT: case A_ZOOMRESET:	/* the window's text */
+		if(term_zoom(a == A_ZOOMIN ? 1 : a == A_ZOOMOUT ? -1 : 0))
+			settings_set_font_size(term_font_size());
+		return;
 	}
 	if(docs == 0)
 		return;
@@ -519,13 +526,6 @@ app_action(int a)
 		break;
 	case A_STATUS:
 		st.wants_status = 1;
-		break;
-	case A_PREFS:
-		settings_open();
-		break;
-	case A_ZOOMIN: case A_ZOOMOUT: case A_ZOOMRESET:	/* the window's text */
-		if(term_zoom(a == A_ZOOMIN ? 1 : a == A_ZOOMOUT ? -1 : 0))
-			settings_set_font_size(term_font_size());
 		break;
 	case A_GOTOFILE:
 		st.wants_gotofile = 1;
