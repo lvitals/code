@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Code Editor
+GenericName=Text Editor
+Comment=Edit text and source code
+Exec=xcedit %F
+Icon=xcedit
+Terminal=false
+StartupNotify=true
+StartupWMClass=xcedit
+Categories=Development;TextEditor;
+Keywords=text;editor;code;programming;
+MimeType=text/plain;text/x-csrc;text/x-chdr;text/x-c++src;text/x-c++hdr;text/x-python;text/x-script.python;text/x-shellscript;text/x-makefile;text/x-java;text/javascript;application/json;text/markdown;text/x-lua;text/x-rust;text/x-go;text/xml;text/html;text/css;application/x-yaml;text/x-csharp;text/x-diff;

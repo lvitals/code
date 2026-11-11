@@ -1,0 +1,77 @@
+/* COBOL */
+#include "../lang_def.h"
+
+LANGUAGE(cobol) {
+	.name = "cobol",
+	.title = "COBOL",
+	.flags = F_NOCASE | F_DASH,
+	.extensions = "cbl cob cpy cobol pco",
+
+	.keywords = WORDS(
+		"accept", "access", "add", "advancing", "after", "allocate", "also",
+		"alter", "and", "any", "are", "ascending", "assign", "at", "author",
+		"before", "by", "call", "cancel", "character", "characters", "class",
+		"class-id", "close", "collating", "common", "compute", "configuration",
+		"content", "continue", "converting", "copy", "corr", "corresponding",
+		"count", "data", "date-compiled", "date-written", "delete", "delimited",
+		"delimiter", "depending", "descending", "display", "divide", "division",
+		"down", "duplicates", "dynamic", "else", "end", "end-accept", "end-add",
+		"end-call", "end-class", "end-compute", "end-delete", "end-display",
+		"end-divide", "end-evaluate", "end-function", "end-if", "end-method",
+		"end-multiply", "end-perform", "end-program", "end-read", "end-receive",
+		"end-return", "end-rewrite", "end-search", "end-start", "end-string",
+		"end-subtract", "end-unstring", "end-write", "entry", "environment",
+		"eop", "equal", "error", "evaluate", "exception", "exit", "extend",
+		"factory", "fd", "file", "file-control", "first", "for", "free", "from",
+		"function-id", "generate", "giving", "go", "goback", "greater", "i-o",
+		"i-o-control", "id", "identification", "if", "in", "indexed", "initial",
+		"initialize", "initiate", "input", "input-output", "inspect",
+		"installation", "into", "invalid", "invoke", "is", "key", "leading",
+		"less", "line", "lines", "linkage", "local-storage", "lock", "merge",
+		"method-id", "mode", "move", "multiply", "next", "not", "object",
+		"object-computer", "of", "on", "open", "optional", "or", "organization",
+		"other", "output", "overflow", "page", "perform", "pointer",
+		"procedure", "program", "program-id", "raise", "random", "read",
+		"record", "records", "reference", "relative", "release", "remainder",
+		"replace", "replacing", "report", "repository", "resume", "return",
+		"returning", "rewrite", "rounded", "run", "screen", "sd", "search",
+		"section", "security", "select", "sentence", "separate", "sequence",
+		"sequential", "set", "size", "sort", "source-computer", "special-names",
+		"standard", "start", "status", "stop", "string", "subtract", "suppress",
+		"tallying", "terminate", "test", "than", "then", "through", "thru",
+		"times", "to", "trailing", "unlock", "unstring", "until", "up", "upon",
+		"use", "using", "validate", "value", "varying", "when", "with",
+		"working-storage", "write"),
+
+	.types = WORDS(
+		"alphabetic", "alphabetic-lower", "alphabetic-upper", "alphanumeric",
+		"alphanumeric-edited", "based", "binary", "binary-char",
+		"binary-double", "binary-long", "binary-short", "blank", "comp",
+		"comp-1", "comp-2", "comp-3", "comp-4", "comp-5", "computational",
+		"computational-1", "computational-2", "computational-3",
+		"computational-4", "computational-5", "external", "filler",
+		"float-long", "float-short", "global", "index", "just", "justified",
+		"national", "negative", "numeric", "numeric-edited", "occurs",
+		"packed-decimal", "pic", "picture", "positive", "redefines", "renames",
+		"sign", "sync", "synchronized", "typedef", "usage", "values"),
+
+	.constants = WORDS(
+		"all", "false", "high-value", "high-values", "low-value", "low-values",
+		"null", "nulls", "quote", "quotes", "self", "space", "spaces", "super",
+		"true", "zero", "zeroes", "zeros"),
+
+	.functions = WORDS(
+		"abs", "acos", "annuity", "asin", "atan", "byte-length", "char", "cos",
+		"current-date", "date-of-integer", "date-to-yyyymmdd", "day-of-integer",
+		"exp", "exp10", "factorial", "fraction-part", "function", "integer",
+		"integer-of-date", "integer-of-day", "integer-part", "length", "log",
+		"log10", "lower-case", "max", "mean", "median", "midrange", "min",
+		"mod", "numval", "numval-c", "ord", "ord-max", "ord-min", "pi",
+		"present-value", "range", "rem", "reverse", "sin", "sqrt",
+		"standard-deviation", "sum", "tan", "trim", "upper-case", "variance",
+		"when-compiled"),
+
+	.line_comments = { "*>" },
+	.column_comments = { COLUMN(7, "*" "/") },
+	.quotes = "'\"",
+};

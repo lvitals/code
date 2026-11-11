@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 240 240">
+  <title>Code Editor</title>
+  <defs>
+    <radialGradient id="bg" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="240">
+      <stop offset="0" stop-color="#1A1A1A"/>
+      <stop offset="1" stop-color="#030303"/>
+    </radialGradient>
+  </defs>
+  <rect width="240" height="240" rx="44" fill="url(#bg)"/>
+  <polygon fill="#234285" points="101,67 101,91 52,120 87,150 87,172 36,132 36,108"/>
+  <polygon fill="#FFFFFF" points="120,67 139,67 121,172 102,172"/>
+  <polygon fill="#234285" points="140,173 140,149 189,120 154,90 154,68 205,108 205,132"/>
+</svg>

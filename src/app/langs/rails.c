@@ -1,0 +1,66 @@
+/* Rails */
+#include "../lang_def.h"
+
+LANGUAGE(rails) {
+	.name = "rails",
+	.title = "Rails",
+
+	.keywords = WORDS(
+		"BEGIN", "END", "__FILE__", "__LINE__", "alias", "and", "begin",
+		"break", "case", "class", "def", "defined?", "do", "else", "elsif",
+		"end", "ensure", "false", "for", "if", "in", "module", "next", "nil",
+		"not", "or", "redo", "rescue", "retry", "return", "self", "super",
+		"then", "true", "undef", "unless", "until", "when", "while", "yield"),
+
+	.functions = WORDS(
+		"accepts_nested_attributes_for", "after_create", "after_destroy",
+		"after_filter", "after_save", "after_update", "after_validation",
+		"after_validation_on_create", "after_validation_on_update",
+		"alias_attribute", "alias_method_chain", "around_filter", "at_exit",
+		"attr_accessible", "attr_protected", "attr_readonly", "autoload",
+		"before_create", "before_destroy", "before_filter", "before_save",
+		"before_update", "before_validation", "before_validation_on_create",
+		"before_validation_on_update", "belongs_to", "binding", "caller",
+		"catch", "cattr_accessor", "check_box", "chomp", "chomp!", "chop",
+		"chop!", "composed_of", "content_for", "default_scope", "delegate",
+		"error_messages_for", "eval", "exec", "exit", "exit!", "extend", "fail",
+		"fields_for", "file_field", "filter", "filter_parameter_logging",
+		"fork", "form_for", "format", "gets", "global_variables", "gsub",
+		"gsub!", "has_and_belongs_to_many", "has_many", "has_one", "helper",
+		"helper_method", "hidden_field", "hide_action", "image_submit_tag",
+		"include", "iterator?", "label", "lambda", "layout", "link_to", "load",
+		"local_variables", "loop", "mattr_accessor", "memoize", "model",
+		"module_function", "observer", "open", "p", "password_field", "print",
+		"printf", "proc", "putc", "puts", "radio_button", "raise", "rand",
+		"readline", "readlines", "redirect_to", "redirect_to_path",
+		"redirect_to_url", "render", "render_action", "render_component",
+		"render_file", "render_nothing", "render_template", "render_text",
+		"render_without_layout", "require", "require_dependency",
+		"require_relative", "rescue_from", "respond_to", "returning",
+		"scaffold", "scope", "select", "serialize", "service",
+		"skip_after_filter", "skip_before_filter", "sleep", "split", "sprintf",
+		"srand", "sub", "sub!", "submit", "syscall", "system", "test",
+		"text_area", "text_field", "trace_var", "trap", "untrace_var",
+		"url_for", "validate", "validate_on_create", "validate_on_update",
+		"validates", "validates_acceptance_of", "validates_associated",
+		"validates_confirmation_of", "validates_each", "validates_exclusion_of",
+		"validates_format_of", "validates_inclusion_of", "validates_length_of",
+		"validates_numericality_of", "validates_presence_of",
+		"validates_size_of", "validates_uniqueness_of", "verify"),
+
+	.line_comments = { "#" },
+	.block_comments = { { "=begin", "=end" } },
+	.quotes = "`'\"",
+
+	.blocks = BLOCKS(
+		WORD_BLOCK("begin", "end"),
+		WORD_BLOCK("class", "end"),
+		WORD_BLOCK("def", "end"),
+		WORD_BLOCK("do", "end"),
+		WORD_BLOCK("for", "end"),
+		WORD_BLOCK("module", "end"),
+		WORD_BLOCK("case", "end"),
+		OP_BLOCK("(", ")"),
+		OP_BLOCK("[", "]"),
+		OP_BLOCK("{", "}")),
+};
