@@ -11,6 +11,7 @@
 #define _XOPEN_SOURCE 700	/* fork, setsid: the window apart from the terminal */
 #include <errno.h>
 #include <fcntl.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -324,66 +325,51 @@ static void pos_cb(GLFWwindow *w, double x, double y);
  *   moved               the text scrolls with it, as the wheel does
  *   held, then lifted   the right button: the context menu
  *   held, then moved    the left button held: a selection
- * x, y: in the window's units (cell_at) */
+ * Two fingers (the second down before the first is held or selects):
+ *   apart, or nearer    the zoom, as Ctrl and + or -
+ *   moved together      the text scrolls with them
+ * then nothing until all are lifted.  x, y: in the window's units
+ * (cell_at); f: the finger, 0 or 1 */
 #define TOUCH_SLOP	8.0	/* moved this far (units of the window): not a tap */
 #define TOUCH_HOLD	0.45	/* held this long (seconds): not a tap */
+#define TOUCH_PINCH	1.12	/* the fingers this much farther apart, or
+				   nearer: a step of the zoom */
+
+enum { T_TAP, T_SCROLL, T_SELECT, T_PINCH, T_DONE };
 
 static struct {
-	int on;			/* a finger is down */
-	int mode;		/* 0 a tap so far, 1 scrolling, 2 selecting */
+	int down;		/* the fingers down: 1 << f */
+	int first;		/* the finger that touched first */
+	int mode;		/* T_* */
 	double x0, y0, t0;	/* where and when it touched */
-	double lx, ly;		/* where it was last */
+	double lx, ly;		/* where it (or the two, their middle) was last */
 	double accx, accy;	/* moved, not yet scrolled */
+	double fx[2], fy[2];	/* where each finger is */
+	double dist;		/* T_PINCH: the fingers' distance at the last step */
 } touch;
 
-static void
-touch_down(double x, double y)
+static double
+touch_dist(void)
 {
-	touch.on = 1;
-	touch.mode = 0;
-	touch.x0 = touch.lx = x;
-	touch.y0 = touch.ly = y;
-	touch.t0 = glfwGetTime();
-	touch.accx = touch.accy = 0;
-	cell_at(x, y, &mx, &my);
-	mouse_event(M_MOVE, 3, 0);	/* the menu bar's hover, as the mouse */
+	double dx = touch.fx[0] - touch.fx[1], dy = touch.fy[0] - touch.fy[1];
+
+	return sqrt(dx * dx + dy * dy);
 }
 
+/* the text follows the finger, now at x, y: a notch of the wheel is 3
+   lines, or 6 columns (editor.c) */
 static void
-touch_motion(double x, double y)
+touch_scroll(double x, double y)
 {
 	int ww, wh, fw, fh;
-	double ux = 1, uy = 1, dx, dy;	/* a cell, in units of the window */
+	double ux = 1, uy = 1;	/* a cell, in units of the window */
 
-	if(!touch.on)
-		return;
-	if(touch.mode == 0) {
-		dx = x - touch.x0;
-		dy = y - touch.y0;
-		if(dx * dx + dy * dy < TOUCH_SLOP * TOUCH_SLOP)
-			return;
-		if(glfwGetTime() - touch.t0 >= TOUCH_HOLD) {
-			/* held, then moved: a selection from where it touched */
-			touch.mode = 2;
-			cell_at(touch.x0, touch.y0, &mx, &my);
-			click(MB_LEFT, 1, 0);
-		} else
-			touch.mode = 1;
-	}
-	if(touch.mode == 2) {
-		pos_cb(win, x, y);
-		touch.lx = x;
-		touch.ly = y;
-		return;
-	}
 	glfwGetWindowSize(win, &ww, &wh);
 	glfwGetFramebufferSize(win, &fw, &fh);
 	if(fw > 0)
 		ux = (double)cellw * ww / fw;
 	if(fh > 0)
 		uy = (double)cellh * wh / fh;
-	/* the text follows the finger: a notch of the wheel is 3 lines, or
-	   6 columns (editor.c) */
 	touch.accy += y - touch.ly;
 	touch.accx += x - touch.lx;
 	touch.lx = x;
@@ -400,15 +386,98 @@ touch_motion(double x, double y)
 }
 
 static void
-touch_up(void)
+touch_down(int f, double x, double y)
 {
-	if(!touch.on)
+	if(touch.down & 1 << f)
 		return;
-	touch.on = 0;
-	if(touch.mode == 2) {
+	touch.down |= 1 << f;
+	touch.fx[f] = x;
+	touch.fy[f] = y;
+	if(touch.down == 1 << f) {	/* the first */
+		touch.first = f;
+		touch.mode = T_TAP;
+		touch.x0 = touch.lx = x;
+		touch.y0 = touch.ly = y;
+		touch.t0 = glfwGetTime();
+		touch.accx = touch.accy = 0;
+		cell_at(x, y, &mx, &my);
+		mouse_event(M_MOVE, 3, 0);	/* the menu bar's hover, as the mouse */
+		return;
+	}
+	/* the second: a pinch, unless the first selects (or is done) */
+	if(touch.mode != T_TAP && touch.mode != T_SCROLL)
+		return;
+	touch.mode = T_PINCH;
+	touch.dist = touch_dist();
+	touch.lx = (touch.fx[0] + touch.fx[1]) / 2;
+	touch.ly = (touch.fy[0] + touch.fy[1]) / 2;
+	touch.accx = touch.accy = 0;
+}
+
+static void
+touch_motion(int f, double x, double y)
+{
+	double dx, dy, d;
+
+	if(!(touch.down & 1 << f))
+		return;
+	touch.fx[f] = x;
+	touch.fy[f] = y;
+	if(touch.mode == T_PINCH) {
+		d = touch_dist();
+		if(touch.dist < 1)
+			touch.dist = d;	/* the two touched at one place */
+		else if(d >= touch.dist * TOUCH_PINCH) {
+			for(; d >= touch.dist * TOUCH_PINCH; touch.dist *= TOUCH_PINCH)
+				push(K_CTRL | '=');
+			touch.accx = touch.accy = 0;
+		} else if(d <= touch.dist / TOUCH_PINCH) {
+			for(; d <= touch.dist / TOUCH_PINCH; touch.dist /= TOUCH_PINCH)
+				push(K_CTRL | '-');
+			touch.accx = touch.accy = 0;
+		}
+		touch_scroll((touch.fx[0] + touch.fx[1]) / 2, (touch.fy[0] + touch.fy[1]) / 2);
+		return;
+	}
+	if(f != touch.first || touch.mode == T_DONE)
+		return;
+	if(touch.mode == T_TAP) {
+		dx = x - touch.x0;
+		dy = y - touch.y0;
+		if(dx * dx + dy * dy < TOUCH_SLOP * TOUCH_SLOP)
+			return;
+		if(glfwGetTime() - touch.t0 >= TOUCH_HOLD) {
+			/* held, then moved: a selection from where it touched */
+			touch.mode = T_SELECT;
+			cell_at(touch.x0, touch.y0, &mx, &my);
+			click(MB_LEFT, 1, 0);
+		} else
+			touch.mode = T_SCROLL;
+	}
+	if(touch.mode == T_SELECT) {
+		pos_cb(win, x, y);
+		touch.lx = x;
+		touch.ly = y;
+		return;
+	}
+	touch_scroll(x, y);
+}
+
+static void
+touch_up(int f)
+{
+	if(!(touch.down & 1 << f))
+		return;
+	touch.down &= ~(1 << f);
+	if(f != touch.first || touch.mode == T_PINCH) {
+		if(touch.mode == T_PINCH)
+			touch.mode = T_DONE;	/* the other: no tap, no scroll */
+		return;
+	}
+	if(touch.mode == T_SELECT) {
 		cell_at(touch.lx, touch.ly, &mx, &my);
 		click(MB_LEFT, 0, 0);
-	} else if(touch.mode == 0) {
+	} else if(touch.mode == T_TAP) {
 		cell_at(touch.x0, touch.y0, &mx, &my);
 		if(glfwGetTime() - touch.t0 >= TOUCH_HOLD) {
 			click(MB_RIGHT, 1, 0);
@@ -418,54 +487,68 @@ touch_up(void)
 			click(MB_LEFT, 0, 0);
 		}
 	}
+	touch.mode = T_DONE;
 }
 
-/* the touch taken away (by the compositor: a gesture of its own) */
+/* the touches taken away (by the compositor: a gesture of its own) */
 static void
 touch_cancel(void)
 {
-	if(touch.on && touch.mode == 2)
+	if(touch.down && touch.mode == T_SELECT)
 		click(MB_LEFT, 0, 0);
-	touch.on = 0;
+	touch.down = 0;
+	touch.mode = T_DONE;
 }
 
 /* Wayland: the window's own wl_touch, on the display GLFW has (its events
-   come in glfwPollEvents, on the default queue).  The first finger alone;
+   come in glfwPollEvents, on the default queue).  Two fingers at most;
    the others are not seen */
 #include <wayland-client.h>
 #define GLFW_EXPOSE_NATIVE_WAYLAND
 #include <GLFW/glfw3native.h>
 
 static struct wl_touch *wtouch;
-static int32_t wfinger = -1;	/* the id of the finger followed */
+static int32_t wfinger[2] = { -1, -1 };	/* the ids of the fingers followed */
+
+static int
+wt_finger(int32_t id)
+{
+	return wfinger[0] == id ? 0 : wfinger[1] == id ? 1 : -1;
+}
 
 static void
 wt_down(void *d, struct wl_touch *t, uint32_t serial, uint32_t time,
     struct wl_surface *s, int32_t id, wl_fixed_t x, wl_fixed_t y)
 {
+	int f = wt_finger(-1);
+
 	(void)d; (void)t; (void)serial; (void)time;
-	if(wfinger >= 0 || s != glfwGetWaylandWindow(win))
-		return;	/* another finger, or the title bar (libdecor's) */
-	wfinger = id;
-	touch_down(wl_fixed_to_double(x), wl_fixed_to_double(y));
+	if(f < 0 || s != glfwGetWaylandWindow(win))
+		return;	/* a third finger, or the title bar (libdecor's) */
+	wfinger[f] = id;
+	touch_down(f, wl_fixed_to_double(x), wl_fixed_to_double(y));
 }
 
 static void
 wt_up(void *d, struct wl_touch *t, uint32_t serial, uint32_t time, int32_t id)
 {
+	int f = wt_finger(id);
+
 	(void)d; (void)t; (void)serial; (void)time;
-	if(id != wfinger)
+	if(id < 0 || f < 0)
 		return;
-	wfinger = -1;
-	touch_up();
+	wfinger[f] = -1;
+	touch_up(f);
 }
 
 static void
 wt_motion(void *d, struct wl_touch *t, uint32_t time, int32_t id, wl_fixed_t x, wl_fixed_t y)
 {
+	int f = wt_finger(id);
+
 	(void)d; (void)t; (void)time;
-	if(id == wfinger)
-		touch_motion(wl_fixed_to_double(x), wl_fixed_to_double(y));
+	if(id >= 0 && f >= 0)
+		touch_motion(f, wl_fixed_to_double(x), wl_fixed_to_double(y));
 }
 
 static void
@@ -478,7 +561,7 @@ static void
 wt_cancel(void *d, struct wl_touch *t)
 {
 	(void)d; (void)t;
-	wfinger = -1;
+	wfinger[0] = wfinger[1] = -1;
 	touch_cancel();
 }
 
@@ -497,7 +580,7 @@ seat_caps(void *d, struct wl_seat *seat, uint32_t caps)
 	} else if(!(caps & WL_SEAT_CAPABILITY_TOUCH) && wtouch != 0) {
 		wl_touch_destroy(wtouch);
 		wtouch = 0;
-		wfinger = -1;
+		wfinger[0] = wfinger[1] = -1;
 		touch_cancel();
 	}
 }

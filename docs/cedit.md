@@ -602,7 +602,9 @@ For the fastest opening of a huge file, use `-n` (no line numbers).
 - **Touch screen** (Wayland): a tap is a click (two taps, a double
   click); a finger moved scrolls the text, the lists and the menus; held
   and then lifted, it opens the context menu; held and then moved, it
-  selects.  On X11 the system turns the touches into clicks of the mouse.
+  selects.  Two fingers pinched or spread zoom the text (as Ctrl and + or
+  -); moved together, they scroll it.  On X11 the system turns the
+  touches into clicks of the mouse.
 - **The terminal**: see [section 2](#2-starting-the-editor) (`-f`).
 
 ## 15. Settings
