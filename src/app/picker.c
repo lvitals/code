@@ -237,7 +237,8 @@ hidden_changed(void)
  *               that file opened (a new one, if there is none)
  *
  * Tab and Shift+Tab go from one item to the next, as in each dialog: the
- * search, the list, Hidden, [Open This Folder].
+ * search, the list, Hidden, [Open This Folder], [New Folder], [Trash],
+ * [Close].
  *
  * The mouse: a click chooses, a double click opens it (a folder: into it),
  * [Open This Folder] takes the folder shown.  Save As is the dialog of
@@ -532,6 +533,24 @@ manage_buttons(int from, int right, int y, int at)
 	return x;
 }
 
+/* [Close], in the corner: where it starts, its right cell the last
+   (right); right + 1 when it does not fit after from */
+static int
+close_at(int from, int right)
+{
+	int x = right - text_width("Close") - 1;
+
+	return x < from ? right + 1 : x;
+}
+
+/* [Close] at x (close_at), on row y, if it fits before right + 1:
+   pressed, 1 */
+static int
+close_button(int x, int right, int y)
+{
+	return x <= right && ui_button(ID_P_CLOSE, x, y, "Close", 0, S_FLOAT);
+}
+
 static void
 draw_browse(int w, int h)
 {
@@ -541,7 +560,7 @@ draw_browse(int w, int h)
 	static const char *const mhint = "Enter: make the folder and go into it   Esc: cancel";
 	static char shown;	/* opened: the search has the focus first */
 	int folders = st.picker == PICK_FOLDER;
-	int x, y, lw = 12, lh = h - 6, i, r, cur, act = 0, row = 0, at, inlist, lf, bx, over;
+	int x, y, lw = 12, lh = h - 6, i, r, cur, act = 0, row = 0, at, inlist, lf, bx, cx, over;
 	kcode k;
 
 	if(!loaded) {
@@ -655,18 +674,18 @@ draw_browse(int w, int h)
 	    x + w - 2);
 	if(ui_check(ID_P_HIDDEN, x + 2, y + h - 2, "Hidden (Alt+H)", &st.phidden, S_FLOAT))
 		hidden_changed();
-	bx = x + w - 2;	/* the buttons, from the right */
+	/* the buttons, from the right: [Close] in the corner */
+	cx = close_at(x + 2 + text_width("Hidden (Alt+H)") + 7, x + w - 3);
+	bx = cx;
 	if(folders) {
-		bx = x + w - 4 - text_width("Open This Folder");
+		bx = cx - 3 - text_width("Open This Folder") - 1;
 		if(ui_button(ID_P_FOLDER, bx, y + h - 2, "Open This Folder", 0, S_FLOAT)) {
 			act = 2;	/* the folder shown */
 			row = -2;
 		}
-		bx -= 2;
 	}
-	manage_buttons(x + 2 + text_width("Hidden (Alt+H)") + 7, bx - 1, y + h - 2, S_FLOAT);
-	scr_lower(x + 2, x + 6 + text_width("Hidden (Alt+H)"), y + h - 2);
-	if(ui_modal_end()) {
+	manage_buttons(x + 2 + text_width("Hidden (Alt+H)") + 7, bx - 3, y + h - 2, S_FLOAT);
+	if(close_button(cx, x + w - 3, y + h - 2) | ui_modal_end()) {
 		shown = 0;
 		close_picker();
 		return;
@@ -703,7 +722,7 @@ draw_picker(void)
 	char path[PATH_MAX_ + 2];
 	int w = scr_cols >= 60 ? scr_cols - 20 : scr_cols - 2, h = scr_rows - 10;
 	int x, y, act = 0, lw = 12, r, done = 0, over;
-	int tw;
+	int tw, cx;
 	kcode k;
 
 	if(w < 10)
@@ -759,13 +778,14 @@ draw_picker(void)
 	}
 	r = ui_list(ID_P_LIST, x + 1, y + 3, w - 2, h - 5, nents, ent, &sel, &top);
 	/* under the list, one row: the hidden files, shown or not (in line
-	   with Folder: and File name:); in a window, a third of a cell lower, in
-	   the middle between the list and the bottom line of the frame */
+	   with Folder: and File name:), the two buttons, [Close] in the corner */
 	if(ui_check(ID_P_HIDDEN, x + 2, y + h - 2, "Hidden Files (Ctrl+H)", &st.phidden, S_FLOAT))
 		hidden_changed();
-	manage_buttons(x + 2 + text_width("Hidden Files (Ctrl+H)") + 7, x + w - 3, y + h - 2,
+	cx = close_at(x + 2 + text_width("Hidden Files (Ctrl+H)") + 7, x + w - 3);
+	manage_buttons(x + 2 + text_width("Hidden Files (Ctrl+H)") + 7, cx - 3, y + h - 2,
 	    S_FLOAT);
-	scr_lower(x + 2, x + 6 + text_width("Hidden Files (Ctrl+H)"), y + h - 2);
+	if(close_button(cx, x + w - 3, y + h - 2))
+		done = 1;
 	if(r == 2 && !making)
 		act = 1;
 	if(r && nents && !making) {
