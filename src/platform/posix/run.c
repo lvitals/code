@@ -24,6 +24,19 @@ struct obuf {
 	size_t n, cap;
 };
 
+/* in the child, before the command: the descriptors from 3 up, which are
+ * the editor's (/dev/zero, the files mapped, the window's connection) */
+static void
+close_rest(void)
+{
+	long max = sysconf(_SC_OPEN_MAX), fd;
+
+	if(max < 0 || max > 65536)
+		max = 65536;
+	for(fd = 3; fd < max; fd++)
+		close((int)fd);
+}
+
 /* what fd has, added to b: 0 at its end, -1 on an error (or too much) */
 static int
 take(int fd, struct obuf *b)
@@ -73,6 +86,7 @@ plat_run(const char *cmd, const char *dir, const char *in, size_t n,
 		close(pi[0]); close(pi[1]);
 		close(po[0]); close(po[1]);
 		close(pe[0]); close(pe[1]);
+		close_rest();	/* the editor's files, not the command's */
 		if(dir && *dir && chdir(dir) < 0)
 			_exit(126);
 		execl("/bin/sh", "sh", "-c", cmd, (char *)0);
