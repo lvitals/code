@@ -59,8 +59,7 @@ the entry of xcedit in the menus of the system (`share/applications/xcedit.deskt
 its data (`src/platform/icon.h`, taken from `unnamed.png`: </> on a dark
 square, < > in the blue of the editor's bar and / in its white) by
 `tools/icon-svg.c` (`make icon`); the window draws the same into its own
-icon.  The settings are in `~/.config/cedit/settings.json`, for both (those
-of `~/.config/edit` are taken the first time).
+icon.  The settings are in `~/.config/cedit/settings.json`, for both.
 
 ## Features
 
@@ -207,7 +206,7 @@ of `~/.config/edit` are taken the first time).
   each (a clipboard of as many lines as cursors is pasted a line each);
   Esc leaves one.  See ROADMAP.md.
 - Open File in Project (Alt+P, File menu) and Search in Project (Alt+/,
-  Edit menu), as Helix has them (Space f, Space /): a list at the left,
+  Edit menu): a list at the left,
   the file selected at the right (highlighted; a binary one is said).
   The project is the repository of the project's folder (the first
   folder above with a .git), else that folder itself; its name is on the

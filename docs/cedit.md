@@ -399,7 +399,7 @@ stands for the folder being shown.
 
 ### Open File in Project (Alt+P)
 
-Like Helix's Space f.  A list of the project's files on the left and a
+A list of the project's files on the left and a
 preview of the selected file on the right (highlighted; a binary file
 is reported as such).
 
@@ -415,7 +415,7 @@ is reported as such).
 
 ### Search in Project (Alt+/)
 
-Like Helix's Space /.  Searches the text of every file in the project
+Searches the text of every file in the project
 for a regular expression (or for plain text, if what is typed has no
 special characters).  Each match is listed as `path:line`, and the
 preview shows the line in the middle.
@@ -697,7 +697,7 @@ enabled ("meta sends escape").
 
 | Path or variable | Use |
 |---|---|
-| `$XDG_CONFIG_HOME/cedit/settings.json` | The settings (default `~/.config/cedit/settings.json`); those of `~/.config/edit` are imported the first time |
+| `$XDG_CONFIG_HOME/cedit/settings.json` | The settings (default `~/.config/cedit/settings.json`) |
 | `settings.json.invalid` | A copy of a settings file that was not valid JSON |
 | `$HOME` | `~` in paths and the Open dialogs |
 | `$XDG_DATA_HOME`, `$XDG_DATA_DIRS` | Where xcedit looks for font families |

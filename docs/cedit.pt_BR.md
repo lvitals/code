@@ -399,7 +399,7 @@ representa a pasta mostrada.
 
 ### Open File in Project (Alt+P)
 
-Como o Space f do Helix.  À esquerda, a lista de arquivos do projeto; à
+À esquerda, a lista de arquivos do projeto; à
 direita, uma prévia do arquivo escolhido (com realce; um binário é
 indicado como tal).
 
@@ -416,7 +416,7 @@ indicado como tal).
 
 ### Search in Project (Alt+/)
 
-Como o Space / do Helix.  Procura no texto de todos os arquivos do
+Procura no texto de todos os arquivos do
 projeto uma expressão regular (ou um texto simples, se o que foi
 digitado não tem caracteres especiais).  Cada ocorrência aparece como
 `caminho:linha`, e a prévia mostra a linha no meio.
@@ -701,7 +701,7 @@ escape").
 
 | Caminho ou variável | Uso |
 |---|---|
-| `$XDG_CONFIG_HOME/cedit/settings.json` | As configurações (padrão `~/.config/cedit/settings.json`); as de `~/.config/edit` são importadas na primeira vez |
+| `$XDG_CONFIG_HOME/cedit/settings.json` | As configurações (padrão `~/.config/cedit/settings.json`) |
 | `settings.json.invalid` | Cópia de um arquivo de configurações que não era JSON válido |
 | `$HOME` | O `~` nos caminhos e nos diálogos de abrir |
 | `$XDG_DATA_HOME`, `$XDG_DATA_DIRS` | Onde o xcedit procura as famílias de fontes |
