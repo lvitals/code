@@ -1,0 +1,587 @@
+.\" Code Editor: the manual page of cedit and xcedit (mdoc; check it with
+.\" mandoc -Tlint docs/man/cedit.1).  The full manual: docs/cedit.md.
+.Dd November 11, 2026
+.Dt CEDIT 1
+.Os
+.Sh NAME
+.Nm cedit ,
+.Nm xcedit
+.Nd text editor for the terminal and for a window
+.Sh SYNOPSIS
+.Nm cedit
+.Op Fl fhnv
+.Op Fl g Ar file : Ns Ar line Ns Op : Ns Ar column
+.Op Ar file | dir ...
+.Nm xcedit
+.Op Fl fhnv
+.Op Fl g Ar file : Ns Ar line Ns Op : Ns Ar column
+.Op Ar file | dir ...
+.Nm cedit
+.Fl \-lex Ar file
+.Op Ar language
+.Sh DESCRIPTION
+.Nm cedit
+is a text editor written in portable C99, with a menu bar, mouse
+support and the usual keyboard shortcuts.
+It runs in a terminal.
+.Nm xcedit
+is the same editor in a window of its own (GLFW and OpenGL); it has
+the same menus, keys, dialogs and settings, and draws its text with a
+built-in font (FantasqueSansMono) or one named in the settings.
+.Pp
+Each
+.Ar file
+is opened in a document of its own; one that does not exist is opened
+empty and created when it is saved.
+With no
+.Ar file ,
+an empty unnamed document is opened.
+A
+.Ar dir
+is not opened: it becomes the
+.Em project folder
+.Pq see Sx THE PROJECT .
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl f , Fl \-foreground
+.Nm xcedit
+only: keep the terminal until the window closes.
+Without it,
+.Nm xcedit
+gives the terminal back as soon as its window is open and goes on
+apart from it.
+Use it when the editor is
+.Ev EDITOR
+for a program that waits for it, such as
+.Xr git 1 .
+.It Fl g , Fl \-goto Ar file : Ns Ar line Ns Op : Ns Ar column
+Open
+.Ar file
+with the cursor at
+.Ar line
+and
+.Ar column ,
+counted from 1.
+.It Fl h , Fl \-help
+Print the usage and exit.
+.It Fl \-lex Ar file Op Ar language
+Print each line of
+.Ar file
+and, under it, the highlighting class of each character, then exit:
+.Sq \&.
+text,
+.Sq K
+keyword,
+.Sq T
+type or function,
+.Sq S
+string,
+.Sq C
+comment,
+.Sq N
+number or constant,
+.Sq P
+preprocessor,
+.Sq D
+deleted line.
+The language is the one the editor detects, or
+.Ar language .
+It is meant for writing a language definition.
+.It Fl n , Fl \-no-line-numbers
+Open the files without line numbers; the lines are then not counted.
+.It Fl v , Fl \-version
+Print the version and exit.
+.It Fl \-
+Treat the arguments after it as file names.
+.El
+.Ss The screen
+At the top is the menu bar (File, Edit, View, Help), opened with
+.Ic Alt
+and the underlined letter or with
+.Ic F10 .
+Below it are the text area with its line numbers and scrollbars, the
+Find bar when it is open, and the status bar.
+The status bar shows the language, the line endings (LF or CRLF; a
+click switches them), the encoding (a click opens the encoding list),
+the indentation (a click changes it), the line and column, OVR in
+overtype mode, an asterisk when there are unsaved changes, the project
+folder (a click opens Open Project Folder) and the file name (a click
+switches documents).
+.Pp
+In every dialog
+.Ic Tab
+and
+.Ic Shift+Tab
+move between its items,
+.Ic Enter
+does the default action and
+.Ic Esc
+closes it.
+.Ss The mouse
+A click places the cursor and a drag selects; a double click selects a
+word and a triple click the line;
+.Ic Shift Ns +click
+extends the selection and
+.Ic Alt Ns +click
+adds or removes a cursor.
+The wheel scrolls, and with
+.Ic Shift
+scrolls the columns.
+The middle button pastes; the right button opens a menu with Cut,
+Copy, Paste, Select All and Find.
+.Sh KEYS
+.Ss Files
+.Bl -tag -width "Ctrl+Shift+S" -compact
+.It Ic Ctrl+N
+New File
+.It Ic Ctrl+O
+Open File
+.It Ic Alt+O
+Open Project Folder
+.It Ic Alt+P
+Open File in Project
+.It Ic Ctrl+S
+Save
+.It Ic Ctrl+Shift+S
+Save As
+.It Ic Ctrl+W
+Close File
+.It Ic Ctrl+Q
+Exit
+.El
+.Ss Moving and selecting
+.Bl -tag -width "Shift+Alt+Right" -compact
+.It Ic Ctrl+Left , Ic Ctrl+Right
+one word
+.It Ic Home
+the first non-blank character, then the start of the line
+.It Ic Ctrl+Home , Ic Ctrl+End
+the start or the end of the text
+.It Ic Ctrl+Up , Ic Ctrl+Down
+scroll one line
+.It Ic Shift
+with a move: extend the selection
+.It Ic Ctrl+A
+Select All
+.It Ic Ctrl+L
+select the line (again: the next one too)
+.It Ic Shift+Alt+Right
+Expand Selection: word, quotes, brackets, line, all
+.It Ic Shift+Alt+Left
+Shrink Selection
+.El
+.Ss Editing
+.Bl -tag -width "Shift+Alt+Up, Down" -compact
+.It Ic Ctrl+Z
+Undo
+.It Ic Ctrl+Y , Ic Ctrl+Shift+Z
+Redo
+.It Ic Ctrl+X , Ic Shift+Delete
+Cut (without a selection: the line)
+.It Ic Ctrl+C , Ic Ctrl+Insert
+Copy (without a selection: the line)
+.It Ic Ctrl+V , Ic Shift+Insert
+Paste
+.It Ic Ctrl+Backspace , Ic Ctrl+Delete
+delete a word
+.It Ic Ctrl+Shift+H , Ic Ctrl+Shift+G
+delete to the start, or the end, of the line
+.It Ic Alt+Up , Ic Alt+Down
+move the lines up or down
+.It Ic Tab , Ic Shift+Tab
+indent or unindent the selected lines
+.It Ic Insert
+overtype on or off
+.It Ic Ctrl+D
+Add Next Occurrence (a cursor at the next match of the selection)
+.It Ic Shift+Alt+Up , Down
+Add Cursor Above, Below
+.It Ic Esc
+back to one cursor
+.It Ic Ctrl+Space
+Complete Word, from the words of the document
+.It Ic Alt+\&|
+Filter Through Command: the selection through
+.Ql sh -c
+.It Ic Alt+M , Ic Alt+J
+Set Mark, Jump to Mark
+.El
+.Ss Searching and going places
+.Bl -tag -width "Ctrl+Alt+Enter" -compact
+.It Ic Ctrl+F
+Find
+.It Ic Ctrl+R
+Replace
+.It Ic F3
+Find Next
+.It Ic Ctrl+Alt+Enter
+in the Replace field: Replace All
+.It Ic Alt+/
+Search in Project
+.It Ic Ctrl+G
+Go to Line:Column
+.It Ic Ctrl+P
+Go to File (the documents open)
+.It Ic Ctrl+\&]
+Go to Matching Bracket, or to the other end of a block
+.It Ic Alt+Left
+Go Back
+.It Ic Alt+Right
+Go Forward
+.El
+.Ss View
+.Bl -tag -width "Ctrl++, Ctrl+-" -compact
+.It Ic Alt+Z
+Word Wrap
+.It Ic Alt+N
+Line Numbers
+.It Ic Alt+R
+Relative Line Numbers
+.It Ic Ctrl++ , Ic Ctrl+-
+.Nm xcedit :
+Zoom In, Zoom Out
+.It Ic Ctrl+0
+.Nm xcedit :
+Reset Zoom
+.El
+.Pp
+The View menu also has Show Tabs, Show Indent Guides, Show Line Ends,
+Show End of File, Syntax Highlighting, Highlight Current Line and
+Highlight Matching Brackets; the Edit menu has Auto Indent and
+Backspace Removes a Whole Indent.
+.Sh FIND AND REPLACE
+The Find bar has the options Match Case, Whole Word and Use Regex,
+which are kept in the settings.
+The search moves as the text is typed;
+.Ic Enter
+or
+.Ic F3
+finds the next match.
+In the Replace field
+.Ic Enter
+replaces the match and finds the next one.
+.Pp
+The regular expressions are the editor's own:
+.Bl -tag -width "{m,} {m,n}" -compact
+.It Li \&.
+any character but a newline
+.It Li [abc] [^a-z]
+a character in, or not in, a set
+.It Li \ed \ew \es
+a digit, a word character, a blank;
+.Li \eD \eW \eS
+the opposite
+.It Li \eb \eB
+a word boundary, or not one
+.It Li ^ $
+the start and the end of a line
+.It Li * + \&?
+0 or more, 1 or more, 0 or 1
+.It Li {m} {m,} {m,n}
+m times, at least m, m to n
+.It Li *? +? ?? {..}\&?
+the same, as few as possible
+.It Li \&( \&)
+a group, captured (1 to 9)
+.It Li \&(?: \&)
+a group, not captured
+.It Li a|b
+either
+.El
+.Pp
+In a replacement
+.Li $1
+to
+.Li $9
+.Po or
+.Li \e1
+to
+.Li \e9
+.Pc
+are the groups and
+.Li $0
+the whole match.
+.Sh OPEN FILE
+File > Open File shows a folder (at first the project folder), a
+Search field and the folders and files in it.
+Typing narrows the list with a fuzzy match;
+.Ic Up
+and
+.Ic Down
+choose;
+.Ic Enter
+goes into a folder
+.Pq Pa ..\& No goes up
+or opens a file;
+.Ic Backspace
+with an empty Search, or
+.Ic Alt+Up ,
+goes up.
+Typing
+.Ql name/
+goes into a folder,
+.Ql ~/
+home and
+.Ql /
+to the root.
+A name that matches nothing opens a new file of that name.
+.Ic Alt+H
+.Po
+.Ic Ctrl+H
+in
+.Nm xcedit
+.Pc
+shows or hides the hidden files.
+.Pp
+Save As has a File name field instead, with the names that start with
+the one typed, and asks before it writes over a file.
+A save writes a new file and renames it over the old one, keeping its
+mode.
+.Sh THE PROJECT
+The project folder is the
+.Ar dir
+given on the command line, else the one chosen with File > Open
+Project Folder, else the folder the editor was started in.
+It is shown in the status bar, and Open and Save As start there.
+The project that Open File in Project and Search in Project look
+through is the Git repository the project folder is in, or else the
+folder itself.
+Hidden files and folders, links to folders, and the files left out by
+.Pa .gitignore ,
+.Pa .ignore
+and
+.Pa .git/info/exclude
+are not part of it.
+.Bl -tag -width Ds
+.It Open Project Folder Pq Ic Alt+O
+Lists the folders alone.
+.Ic Enter
+goes into the folder chosen; on
+.Ql \&./ (open here)
+it makes the folder shown the project.
+.Ic Alt+Enter
+makes the folder chosen the project without going into it.
+.It Open File in Project Pq Ic Alt+P
+The files of the project, narrowed by a fuzzy match on their paths, and
+a preview of the one chosen.
+An upper-case letter makes the case matter; blanks separate words that
+must all match.
+.It Search in Project Pq Ic Alt+/
+Each line of the project that matches a regular expression (or a plain
+text), as
+.Ar path : Ns Ar line ,
+with a preview.
+The files are searched on a thread for each core (at most 8), read a
+block at a time (never whole), in their own encoding; a binary file is
+left at its first zero byte.
+A new search cancels the old one.
+.El
+.Pp
+In both lists
+.Ic Up , Down , PgUp , PgDn , Ctrl+P
+and
+.Ic Ctrl+N
+choose,
+.Ic Enter
+opens, the wheel over the preview scrolls it and
+.Ic Esc
+closes.
+No external program is run.
+.Sh ENCODINGS
+The editor reads and writes UTF-8, UTF-8 with a BOM, UTF-16 LE and BE,
+Windows-1252, ISO-8859-1 and ISO-8859-15.
+When a file is opened its encoding is guessed: a BOM; else UTF-16 from
+its zero bytes; else UTF-8 if it is valid UTF-8; else Windows-1252, or
+ISO-8859-1 when no byte is in 80h\(en9Fh.
+A file read and written back is the same bytes.
+The encoding button of the status bar, or File > Encoding, chooses the
+encoding to save with, or reopens the file in another one.
+A character that an 8-bit encoding does not have stops the save, and
+is selected.
+.Sh LARGE FILES
+A file of 32 MB or more is mapped, not read, so it opens at once; it is
+never written into.
+The text is a piece table in a balanced tree, so edits and undo take
+O(log n) time.
+Lines are counted lazily while the editor is idle; until then the
+margin shows the distances to the cursor, dimmed, and the status bar
+the progress.
+Long lines of any length move and draw quickly.
+.Sh SETTINGS
+The settings are a JSON file, shared by
+.Nm cedit
+and
+.Nm xcedit ,
+opened in the editor by File > Preferences and taken at once when it
+is saved.
+Turning an option on or off in the menus also writes it.
+A file that is not valid JSON is not used; the editor says so, uses
+the defaults and keeps the file as
+.Pa settings.json.invalid .
+.Pp
+The true or false options, with their defaults:
+.Bl -tag -width "relative_line_numbers" -compact
+.It Cm word_wrap
+false
+.It Cm auto_indent
+true
+.It Cm show_tabs
+false
+.It Cm show_line_ends
+true
+.It Cm show_end_of_file
+true
+.It Cm line_numbers
+true
+.It Cm relative_line_numbers
+false
+.It Cm highlight_current_line
+true
+.It Cm syntax_highlighting
+true
+.It Cm match_brackets
+true
+.It Cm backspace_unindents
+true
+.It Cm indent_guides
+true
+.It Cm find_match_case
+false
+.It Cm find_whole_word
+false
+.It Cm find_use_regex
+false
+.It Cm show_hidden_files
+false
+.It Cm expand_tabs
+true: Tab puts in spaces, in a text not indented yet
+.El
+.Pp
+The others:
+.Bl -tag -width "ruler_column" -compact
+.It Cm tab_width
+1 to 8, default 4: the width of a tab, and the indentation of a text
+not indented yet (a file keeps its own)
+.It Cm ruler_column
+0 to 9999, default 0: a ruler after that column (0: none)
+.It Cm font_size
+0 to 200, default 0:
+.Nm xcedit Ns 's
+text size in pixels (0: the default)
+.It Cm font
+a string, default
+.Qq :
+.Nm xcedit Ns 's
+font, a file
+.Pq .ttf, .otf, .ttc
+or a family name such as
+.Qq JetBrains Mono
+or
+.Qq JetBrains Mono:Bold ,
+looked up in the font folders by the editor itself;
+.Qq
+is the built-in FantasqueSansMono
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width "XDG_CONFIG_HOME"
+.It Ev XDG_CONFIG_HOME
+Where the settings are, in
+.Pa cedit/settings.json ;
+.Pa ~/.config
+when it is not set.
+.It Ev HOME
+The home folder:
+.Ql ~
+in paths and dialogs.
+.It Ev XDG_DATA_HOME , Ev XDG_DATA_DIRS
+Where
+.Nm xcedit
+looks for font families, in their
+.Pa fonts
+folders, with
+.Pa ~/.local/share/fonts
+and
+.Pa ~/.fonts .
+.It Ev XCEDIT_KEYS
+For tests: keys
+.Nm xcedit
+types when it starts
+.Po
+.Ql ~X
+is Alt+X,
+.Ql ^X
+Ctrl+X,
+.Ql |
+Enter,
+.Ql \&!
+Esc,
+.Ql {x,y}
+a click at a cell,
+.Ql {x,y>x2,y2}
+a drag
+.Pc .
+.It Ev XCEDIT_SNAPSHOT
+For tests: a
+.Pa .ppm
+file
+.Nm xcedit
+writes each frame to.
+.It Ev XCEDIT_TRACE
+For tests: a file
+.Nm xcedit
+writes each event it gets to.
+.El
+.Sh FILES
+.Bl -tag -width Ds -compact
+.It Pa ~/.config/cedit/settings.json
+the settings (those of
+.Pa ~/.config/edit
+are taken the first time)
+.It Pa share/applications/xcedit.desktop
+the menu entry of
+.Nm xcedit
+.It Pa share/icons/hicolor/scalable/apps/xcedit.svg
+its icon
+.El
+.Sh EXIT STATUS
+.Ex -std cedit xcedit
+They fail when the terminal or the window cannot be opened, or when
+.Fl \-lex
+cannot read its file.
+.Sh EXAMPLES
+Open a file at line 120, column 5:
+.Pp
+.Dl $ cedit -g src/main.c:120:5
+.Pp
+Open the editor with a folder as the project:
+.Pp
+.Dl $ xcedit ~/projects/site
+.Pp
+Use the window as the editor of
+.Xr git 1 :
+.Pp
+.Dl $ EDITOR='xcedit -f' git commit
+.Pp
+See how a file is highlighted:
+.Pp
+.Dl $ cedit --lex test.lua lua
+.Sh SEE ALSO
+.Xr git 1
+.Pp
+The full manual, in English and Portuguese:
+.Pa docs/cedit.md
+and
+.Pa docs/cedit.pt_BR.md
+in the sources; how to write a language:
+.Pa docs/LANGUAGES.md .
+.Sh AUTHORS
+.An Leandro Vital
+.Sh CAVEATS
+In some terminals
+.Ic Alt
+and a letter must be enabled
+.Pq Dq meta sends escape .
+There is no language server.
+The regular expressions backtrack: one that would take too long on a
+very long line skips that line in Search in Project.

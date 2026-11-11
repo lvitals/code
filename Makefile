@@ -7,7 +7,9 @@
 #   make xcedit     the window one
 #   make icon       data/xcedit.svg, from src/platform/icon.h (tools/icon-svg.c)
 #   make install    into $(PREFIX) (/usr/local; PREFIX=~/.local for a user),
-#                   with the menu entry and the icon of xcedit; DESTDIR too
+#                   with the manual pages, the menu entry and the icon of
+#                   xcedit; DESTDIR too
+#   make man-lint   check the manual pages (docs/man) with mandoc
 #   make uninstall
 #   make clean
 #
@@ -50,6 +52,7 @@ GUI_LIBS = $(shell pkg-config --libs $(GUI_PKGS)) -lm
 PREFIX  ?= /usr/local
 BINDIR   = $(PREFIX)/bin
 DATADIR  = $(PREFIX)/share
+MANDIR   = $(DATADIR)/man
 
 all: $(BUILD)/cedit $(BUILD)/xcedit
 
@@ -103,22 +106,35 @@ data/xcedit.svg: $(BUILD)/icon-svg
 # icon (the caches of the desktop brought up to date, when there)
 install: all data/xcedit.svg
 	mkdir -p $(DESTDIR)$(BINDIR) $(DESTDIR)$(DATADIR)/applications \
+	    $(DESTDIR)$(MANDIR)/man1 $(DESTDIR)$(MANDIR)/pt_BR/man1 \
 	    $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps $(DESTDIR)$(DATADIR)/licenses/cedit
 	install -m 755 $(BUILD)/cedit $(BUILD)/xcedit $(DESTDIR)$(BINDIR)/
+	install -m 644 docs/man/cedit.1 $(DESTDIR)$(MANDIR)/man1/
+	ln -sf cedit.1 $(DESTDIR)$(MANDIR)/man1/xcedit.1
+	install -m 644 docs/man/pt_BR/cedit.1 $(DESTDIR)$(MANDIR)/pt_BR/man1/
+	ln -sf cedit.1 $(DESTDIR)$(MANDIR)/pt_BR/man1/xcedit.1
 	install -m 644 data/xcedit.desktop $(DESTDIR)$(DATADIR)/applications/
 	install -m 644 data/xcedit.svg $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/
-	install -m 644 licenses/* $(DESTDIR)$(DATADIR)/licenses/cedit/
+	install -m 644 LICENSE $(DESTDIR)$(DATADIR)/licenses/cedit/
 	-[ -n "$(DESTDIR)" ] || update-desktop-database -q $(DATADIR)/applications 2>/dev/null
 	-[ -n "$(DESTDIR)" ] || gtk-update-icon-cache -q -t $(DATADIR)/icons/hicolor 2>/dev/null
+	-[ -n "$(DESTDIR)" ] || makewhatis $(MANDIR) 2>/dev/null || mandb -q 2>/dev/null
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/cedit $(DESTDIR)$(BINDIR)/xcedit \
 	    $(DESTDIR)$(DATADIR)/applications/xcedit.desktop \
-	    $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/xcedit.svg
+	    $(DESTDIR)$(DATADIR)/icons/hicolor/scalable/apps/xcedit.svg \
+	    $(DESTDIR)$(MANDIR)/man1/cedit.1 $(DESTDIR)$(MANDIR)/man1/xcedit.1 \
+	    $(DESTDIR)$(MANDIR)/pt_BR/man1/cedit.1 $(DESTDIR)$(MANDIR)/pt_BR/man1/xcedit.1
 	rm -rf $(DESTDIR)$(DATADIR)/licenses/cedit
 	-[ -n "$(DESTDIR)" ] || update-desktop-database -q $(DATADIR)/applications 2>/dev/null
+	-[ -n "$(DESTDIR)" ] || makewhatis $(MANDIR) 2>/dev/null || mandb -q 2>/dev/null
+
+# the manual pages, as mandoc reads them (its warnings and errors)
+man-lint:
+	mandoc -Tlint -Wwarning docs/man/cedit.1 docs/man/pt_BR/cedit.1
 
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all cedit xcedit icon install uninstall clean
+.PHONY: all cedit xcedit icon install uninstall man-lint clean

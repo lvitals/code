@@ -10,6 +10,12 @@ usual keyboard shortcuts, in two faces from the same sources:
   stb_truetype from a font built into the program (FantasqueSansMono,
   `data/fonts`).
 
+The manual, in English and Portuguese: [docs/cedit.md](docs/cedit.md),
+[docs/cedit.pt_BR.md](docs/cedit.pt_BR.md); the manual page, `man cedit`
+([docs/man/cedit.1](docs/man/cedit.1), in Portuguese
+[docs/man/pt_BR/cedit.1](docs/man/pt_BR/cedit.1); `make man-lint` checks
+them with mandoc).
+
 ```
 make            build/cedit and build/xcedit
 make cedit       the terminal one alone (no GLFW needed)
@@ -46,8 +52,9 @@ make install PREFIX=~/.local    # for one user
 make uninstall
 ```
 
-It installs `cedit` and `xcedit`, the entry of xcedit in the menus of the
-system (`share/applications/xcedit.desktop`: Code Editor) and its icon
+It installs `cedit` and `xcedit`, their manual page (`share/man/man1`,
+and `share/man/pt_BR/man1` in Portuguese; xcedit.1 a link to cedit.1),
+the entry of xcedit in the menus of the system (`share/applications/xcedit.desktop`: Code Editor) and its icon
 (`share/icons/hicolor/scalable/apps/xcedit.svg`).  The icon is made from
 its data (`src/platform/icon.h`, taken from `unnamed.png`: </> on a dark
 square, < > in the blue of the editor's bar and / in its white) by
@@ -319,7 +326,9 @@ balanced tree (a treap) by position.
     src/app       the editor: main, editor (the text area), menu and menus,
                   status, language, search, dialogs, picker and pickfile
     src/app/langs the languages: a file each, and all.h that lists them
-    docs          LANGUAGES.md (how to write a language), lang_template.c
+    docs          the manual (cedit.md, cedit.pt_BR.md), the manual pages
+                  (man/cedit.1, man/pt_BR/cedit.1), LANGUAGES.md (how to
+                  write a language), lang_template.c
     src/platform  the files and folders (posix/files.c), the terminal
                   (posix/term.c), the window (glfw/gui.c), the colours
 

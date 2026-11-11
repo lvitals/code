@@ -1,0 +1,598 @@
+.\" Code Editor: a página de manual do cedit e do xcedit, em português
+.\" (mdoc, UTF-8; confira com mandoc -Tlint docs/man/pt_BR/cedit.1).
+.\" O manual completo: docs/cedit.pt_BR.md.
+.Dd November 11, 2026
+.Dt CEDIT 1
+.Os
+.Sh NAME
+.Nm cedit ,
+.Nm xcedit
+.Nd editor de texto para o terminal e para uma janela
+.Sh SINOPSE
+.Nm cedit
+.Op Fl fhnv
+.Op Fl g Ar arquivo : Ns Ar linha Ns Op : Ns Ar coluna
+.Op Ar arquivo | pasta ...
+.br
+.Nm xcedit
+.Op Fl fhnv
+.Op Fl g Ar arquivo : Ns Ar linha Ns Op : Ns Ar coluna
+.Op Ar arquivo | pasta ...
+.br
+.Nm cedit
+.Fl \-lex Ar arquivo
+.Op Ar linguagem
+.Sh DESCRIÇÃO
+.Nm cedit
+é um editor de texto escrito em C99 portável, com barra de menus,
+suporte a mouse e os atalhos de teclado usuais.
+Ele roda num terminal.
+.Nm xcedit
+é o mesmo editor numa janela própria (GLFW e OpenGL); tem os mesmos
+menus, teclas, diálogos e configurações, e desenha o texto com uma
+fonte embutida (FantasqueSansMono) ou com a fonte indicada nas
+configurações.
+.Pp
+Cada
+.Ar arquivo
+é aberto num documento próprio; um que não existe abre vazio e é
+criado ao salvar.
+Sem
+.Ar arquivo ,
+abre um documento vazio sem nome.
+Uma
+.Ar pasta
+não é aberta: ela passa a ser a
+.Em pasta do projeto
+.Pq veja Sx O PROJETO .
+.Pp
+As opções são:
+.Bl -tag -width Ds
+.It Fl f , Fl \-foreground
+Só no
+.Nm xcedit :
+mantém o terminal preso até a janela fechar.
+Sem ela, o
+.Nm xcedit
+devolve o terminal assim que a janela abre e segue independente dele.
+Use quando o editor for o
+.Ev EDITOR
+de um programa que espera por ele, como o
+.Xr git 1 .
+.It Fl g , Fl \-goto Ar arquivo : Ns Ar linha Ns Op : Ns Ar coluna
+Abre o
+.Ar arquivo
+com o cursor na
+.Ar linha
+e na
+.Ar coluna ,
+contadas a partir de 1.
+.It Fl h , Fl \-help
+Mostra o uso e sai.
+.It Fl \-lex Ar arquivo Op Ar linguagem
+Imprime cada linha do
+.Ar arquivo
+e, embaixo, a classe de realce de cada caractere, e sai:
+.Sq \&.
+texto,
+.Sq K
+palavra-chave,
+.Sq T
+tipo ou função,
+.Sq S
+string,
+.Sq C
+comentário,
+.Sq N
+número ou constante,
+.Sq P
+pré-processador,
+.Sq D
+linha removida.
+A linguagem é a que o editor detecta, ou
+.Ar linguagem .
+Serve para quem escreve a definição de uma linguagem.
+.It Fl n , Fl \-no-line-numbers
+Abre os arquivos sem números de linha; as linhas nem são contadas.
+.It Fl v , Fl \-version
+Mostra a versão e sai.
+.It Fl \-
+Os argumentos seguintes são nomes de arquivo.
+.El
+.Ss A tela
+No alto fica a barra de menus (File, Edit, View, Help), aberta com
+.Ic Alt
+e a letra sublinhada, ou com
+.Ic F10 .
+Abaixo ficam a área de texto com os números de linha e as barras de
+rolagem, a barra de busca quando aberta, e a barra de status.
+A barra de status mostra a linguagem, o fim de linha (LF ou CRLF; um
+clique alterna), a codificação (um clique abre a lista de
+codificações), a indentação (um clique a muda), a linha e a coluna, OVR
+no modo de sobrescrever, um asterisco quando há alterações não salvas,
+a pasta do projeto (um clique abre o Open Project Folder) e o nome do
+arquivo (um clique troca de documento).
+.Pp
+Em todo diálogo,
+.Ic Tab
+e
+.Ic Shift+Tab
+passam entre os itens,
+.Ic Enter
+faz a ação padrão e
+.Ic Esc
+fecha.
+.Ss O mouse
+Um clique posiciona o cursor e arrastar seleciona; clique duplo
+seleciona uma palavra e clique triplo a linha;
+.Ic Shift Ns +clique
+estende a seleção e
+.Ic Alt Ns +clique
+acrescenta ou remove um cursor.
+A roda rola e, com
+.Ic Shift ,
+rola as colunas.
+O botão do meio cola; o botão direito abre um menu com Cut, Copy,
+Paste, Select All e Find.
+.Sh TECLAS
+.Ss Arquivos
+.Bl -tag -width "Ctrl+Shift+S" -compact
+.It Ic Ctrl+N
+New File (documento novo)
+.It Ic Ctrl+O
+Open File (abrir arquivo)
+.It Ic Alt+O
+Open Project Folder (escolher a pasta do projeto)
+.It Ic Alt+P
+Open File in Project (abrir arquivo do projeto)
+.It Ic Ctrl+S
+Save (salvar)
+.It Ic Ctrl+Shift+S
+Save As (salvar como)
+.It Ic Ctrl+W
+Close File (fechar)
+.It Ic Ctrl+Q
+Exit (sair)
+.El
+.Ss Mover e selecionar
+.Bl -tag -width "Shift+Alt+Direita" -compact
+.It Ic Ctrl+Esquerda , Ic Ctrl+Direita
+uma palavra
+.It Ic Home
+o primeiro caractere não branco, depois o início da linha
+.It Ic Ctrl+Home , Ic Ctrl+End
+o início ou o fim do texto
+.It Ic Ctrl+Cima , Ic Ctrl+Baixo
+rola uma linha
+.It Ic Shift
+com um movimento: estende a seleção
+.It Ic Ctrl+A
+Select All (selecionar tudo)
+.It Ic Ctrl+L
+seleciona a linha (de novo: acrescenta a próxima)
+.It Ic Shift+Alt+Direita
+Expand Selection: palavra, aspas, parênteses, linha, tudo
+.It Ic Shift+Alt+Esquerda
+Shrink Selection (volta um passo)
+.El
+.Ss Edição
+.Bl -tag -width "Shift+Alt+Cima, Baixo" -compact
+.It Ic Ctrl+Z
+desfazer
+.It Ic Ctrl+Y , Ic Ctrl+Shift+Z
+refazer
+.It Ic Ctrl+X , Ic Shift+Delete
+recortar (sem seleção: a linha)
+.It Ic Ctrl+C , Ic Ctrl+Insert
+copiar (sem seleção: a linha)
+.It Ic Ctrl+V , Ic Shift+Insert
+colar
+.It Ic Ctrl+Backspace , Ic Ctrl+Delete
+apaga uma palavra
+.It Ic Ctrl+Shift+H , Ic Ctrl+Shift+G
+apaga até o início, ou o fim, da linha
+.It Ic Alt+Cima , Ic Alt+Baixo
+move as linhas para cima ou para baixo
+.It Ic Tab , Ic Shift+Tab
+indenta ou desindenta as linhas selecionadas
+.It Ic Insert
+liga ou desliga o modo de sobrescrever
+.It Ic Ctrl+D
+Add Next Occurrence (um cursor na próxima ocorrência da seleção)
+.It Ic Shift+Alt+Cima , Baixo
+Add Cursor Above, Below (um cursor acima, abaixo)
+.It Ic Esc
+volta a um só cursor
+.It Ic Ctrl+Space
+Complete Word: completa com as palavras do documento
+.It Ic Alt+\&|
+Filter Through Command: passa a seleção por
+.Ql sh -c
+.It Ic Alt+M , Ic Alt+J
+Set Mark, Jump to Mark (marca e volta à marca)
+.El
+.Ss Busca e navegação
+.Bl -tag -width "Ctrl+Alt+Enter" -compact
+.It Ic Ctrl+F
+Find (localizar)
+.It Ic Ctrl+R
+Replace (substituir)
+.It Ic F3
+próxima ocorrência
+.It Ic Ctrl+Alt+Enter
+no campo Replace: Replace All
+.It Ic Alt+/
+Search in Project (buscar no projeto)
+.It Ic Ctrl+G
+Go to Line:Column (ir para linha:coluna)
+.It Ic Ctrl+P
+Go to File (os documentos abertos)
+.It Ic Ctrl+\&]
+Go to Matching Bracket: o parêntese correspondente, ou a outra ponta de
+um bloco
+.It Ic Alt+Esquerda
+Go Back (voltar)
+.It Ic Alt+Direita
+Go Forward (avançar)
+.El
+.Ss Visualização
+.Bl -tag -width "Ctrl++, Ctrl+-" -compact
+.It Ic Alt+Z
+Word Wrap (quebra de linha)
+.It Ic Alt+N
+Line Numbers (números de linha)
+.It Ic Alt+R
+Relative Line Numbers (números relativos)
+.It Ic Ctrl++ , Ic Ctrl+-
+.Nm xcedit :
+Zoom In, Zoom Out
+.It Ic Ctrl+0
+.Nm xcedit :
+Reset Zoom
+.El
+.Pp
+O menu View tem ainda Show Tabs, Show Indent Guides, Show Line Ends,
+Show End of File, Syntax Highlighting, Highlight Current Line e
+Highlight Matching Brackets; o menu Edit tem Auto Indent e Backspace
+Removes a Whole Indent.
+.Sh LOCALIZAR E SUBSTITUIR
+A barra Find tem as opções Match Case, Whole Word e Use Regex, que
+ficam guardadas nas configurações.
+A busca acompanha a digitação;
+.Ic Enter
+ou
+.Ic F3
+vai para a próxima ocorrência.
+No campo Replace,
+.Ic Enter
+substitui a ocorrência e vai para a próxima.
+.Pp
+As expressões regulares são do próprio editor:
+.Bl -tag -width "{m,} {m,n}" -compact
+.It Li \&.
+qualquer caractere menos o fim de linha
+.It Li [abc] [^a-z]
+um caractere do conjunto, ou fora dele
+.It Li \ed \ew \es
+dígito, caractere de palavra, espaço;
+.Li \eD \eW \eS
+o contrário
+.It Li \eb \eB
+limite de palavra, ou não
+.It Li ^ $
+o início e o fim da linha
+.It Li * + \&?
+0 ou mais, 1 ou mais, 0 ou 1
+.It Li {m} {m,} {m,n}
+m vezes, ao menos m, de m a n
+.It Li *? +? ?? {..}\&?
+o mesmo, o mínimo possível
+.It Li \&( \&)
+grupo capturado (1 a 9)
+.It Li \&(?: \&)
+grupo não capturado
+.It Li a|b
+um ou outro
+.El
+.Pp
+Na substituição,
+.Li $1
+a
+.Li $9
+.Po ou
+.Li \e1
+a
+.Li \e9
+.Pc
+são os grupos e
+.Li $0
+a ocorrência inteira.
+.Sh ABRIR ARQUIVOS
+File > Open File mostra uma pasta (no início, a pasta do projeto), um
+campo Search e as pastas e arquivos dela.
+Digitar filtra a lista por busca aproximada;
+.Ic Cima
+e
+.Ic Baixo
+escolhem;
+.Ic Enter
+entra numa pasta
+.Pq Pa ..\& No sobe
+ou abre um arquivo;
+.Ic Backspace
+com Search vazio, ou
+.Ic Alt+Cima ,
+sobe.
+Digitar
+.Ql nome/
+entra numa pasta,
+.Ql ~/
+vai para a pasta pessoal e
+.Ql /
+para a raiz.
+Um nome que não corresponde a nada abre um arquivo novo com esse nome.
+.Ic Alt+H
+.Po
+.Ic Ctrl+H
+no
+.Nm xcedit
+.Pc
+mostra ou esconde os arquivos ocultos.
+.Pp
+O Save As tem, no lugar, um campo File name, com os nomes que começam
+com o digitado, e pergunta antes de gravar por cima de um arquivo.
+Salvar grava um arquivo novo e o renomeia por cima do antigo, mantendo
+as permissões.
+.Sh O PROJETO
+A pasta do projeto é a
+.Ar pasta
+dada na linha de comando; senão, a escolhida em File > Open Project
+Folder; senão, a pasta em que o editor foi iniciado.
+Ela aparece na barra de status, e o Open e o Save As começam nela.
+O projeto em que o Open File in Project e o Search in Project procuram
+é o repositório Git que contém a pasta do projeto, ou então a própria
+pasta.
+Ficam de fora os arquivos e pastas ocultos, os links para pastas e o
+que os
+.Pa .gitignore ,
+.Pa .ignore
+e
+.Pa .git/info/exclude
+excluem.
+.Bl -tag -width Ds
+.It Open Project Folder Pq Ic Alt+O
+Lista só as pastas.
+.Ic Enter
+entra na pasta escolhida; em
+.Ql \&./ (open here)
+faz da pasta mostrada o projeto.
+.Ic Alt+Enter
+faz da pasta escolhida o projeto sem entrar nela.
+.It Open File in Project Pq Ic Alt+P
+Os arquivos do projeto, filtrados por busca aproximada no caminho, e
+uma prévia do escolhido.
+Uma letra maiúscula torna a busca sensível a maiúsculas; espaços
+separam palavras que precisam todas casar.
+.It Search in Project Pq Ic Alt+/
+Cada linha do projeto que casa com uma expressão regular (ou com um
+texto simples), como
+.Ar caminho : Ns Ar linha ,
+com uma prévia.
+Os arquivos são buscados em uma thread por núcleo (no máximo 8), lidos
+um bloco por vez (nunca inteiros), na sua própria codificação; um
+arquivo binário é deixado no primeiro byte zero.
+Uma nova busca cancela a anterior.
+.El
+.Pp
+Nas duas listas,
+.Ic Cima , Baixo , PgUp , PgDn , Ctrl+P
+e
+.Ic Ctrl+N
+escolhem,
+.Ic Enter
+abre, a roda sobre a prévia a rola e
+.Ic Esc
+fecha.
+Nenhum programa externo é executado.
+.Sh CODIFICAÇÕES
+O editor lê e grava UTF-8, UTF-8 com BOM, UTF-16 LE e BE, Windows-1252,
+ISO-8859-1 e ISO-8859-15.
+Ao abrir um arquivo, a codificação é detectada: um BOM; senão UTF-16,
+pelos bytes zero; senão UTF-8, se for UTF-8 válido; senão Windows-1252,
+ou ISO-8859-1 quando nenhum byte está entre 80h e 9Fh.
+Um arquivo lido e gravado de volta fica byte a byte igual.
+O botão de codificação da barra de status, ou File > Encoding, escolhe
+a codificação com que salvar, ou reabre o arquivo em outra.
+Um caractere que uma codificação de 8 bits não tem impede o
+salvamento, e fica selecionado.
+.Sh ARQUIVOS GRANDES
+Um arquivo de 32 MB ou mais é mapeado, não lido, e por isso abre na
+hora; ele nunca é gravado por dentro.
+O texto é uma piece table numa árvore balanceada, então editar e
+desfazer levam tempo O(log n).
+As linhas são contadas aos poucos enquanto o editor está ocioso; até
+lá a margem mostra, em tom apagado, as distâncias até o cursor, e a
+barra de status o progresso.
+Linhas de qualquer comprimento se movem e desenham rápido.
+.Sh CONFIGURAÇÕES
+As configurações são um arquivo JSON, comum ao
+.Nm cedit
+e ao
+.Nm xcedit ,
+aberto no editor por File > Preferences e aplicado na hora ao ser
+salvo.
+Ligar ou desligar uma opção nos menus também o grava.
+Um arquivo que não é JSON válido não é usado; o editor avisa, usa os
+padrões e guarda o arquivo como
+.Pa settings.json.invalid .
+.Pp
+As opções verdadeiro ou falso, com os padrões:
+.Bl -tag -width "relative_line_numbers" -compact
+.It Cm word_wrap
+false
+.It Cm auto_indent
+true
+.It Cm show_tabs
+false
+.It Cm show_line_ends
+true
+.It Cm show_end_of_file
+true
+.It Cm line_numbers
+true
+.It Cm relative_line_numbers
+false
+.It Cm highlight_current_line
+true
+.It Cm syntax_highlighting
+true
+.It Cm match_brackets
+true
+.It Cm backspace_unindents
+true
+.It Cm indent_guides
+true
+.It Cm find_match_case
+false
+.It Cm find_whole_word
+false
+.It Cm find_use_regex
+false
+.It Cm show_hidden_files
+false
+.It Cm expand_tabs
+true: Tab insere espaços, num texto ainda sem indentação
+.El
+.Pp
+As demais:
+.Bl -tag -width "ruler_column" -compact
+.It Cm tab_width
+1 a 8, padrão 4: a largura do tab, e a indentação de um texto ainda sem
+indentação (um arquivo mantém a sua)
+.It Cm ruler_column
+0 a 9999, padrão 0: uma régua depois dessa coluna (0: nenhuma)
+.It Cm font_size
+0 a 200, padrão 0: o tamanho do texto do
+.Nm xcedit
+em pixels (0: o padrão)
+.It Cm font
+uma string, padrão
+.Qq :
+a fonte do
+.Nm xcedit ,
+um arquivo
+.Pq .ttf, .otf, .ttc
+ou o nome de uma família, como
+.Qq JetBrains Mono
+ou
+.Qq JetBrains Mono:Bold ,
+procurada nas pastas de fontes pelo próprio editor;
+.Qq
+é a FantasqueSansMono embutida
+.El
+.Sh AMBIENTE
+.Bl -tag -width "XDG_CONFIG_HOME"
+.It Ev XDG_CONFIG_HOME
+Onde ficam as configurações, em
+.Pa cedit/settings.json ;
+.Pa ~/.config
+quando não está definida.
+.It Ev HOME
+A pasta pessoal: o
+.Ql ~
+nos caminhos e nos diálogos.
+.It Ev XDG_DATA_HOME , Ev XDG_DATA_DIRS
+Onde o
+.Nm xcedit
+procura famílias de fontes, nas pastas
+.Pa fonts
+delas, além de
+.Pa ~/.local/share/fonts
+e
+.Pa ~/.fonts .
+.It Ev XCEDIT_KEYS
+Para testes: teclas que o
+.Nm xcedit
+digita ao iniciar
+.Po
+.Ql ~X
+é Alt+X,
+.Ql ^X
+Ctrl+X,
+.Ql |
+Enter,
+.Ql \&!
+Esc,
+.Ql {x,y}
+um clique numa célula,
+.Ql {x,y>x2,y2}
+um arrasto
+.Pc .
+.It Ev XCEDIT_SNAPSHOT
+Para testes: um arquivo
+.Pa .ppm
+em que o
+.Nm xcedit
+grava cada quadro.
+.It Ev XCEDIT_TRACE
+Para testes: um arquivo em que o
+.Nm xcedit
+grava cada evento que recebe.
+.El
+.Sh ARQUIVOS
+.Bl -tag -width Ds -compact
+.It Pa ~/.config/cedit/settings.json
+as configurações (as de
+.Pa ~/.config/edit
+são importadas na primeira vez)
+.It Pa share/applications/xcedit.desktop
+a entrada do
+.Nm xcedit
+no menu do sistema
+.It Pa share/icons/hicolor/scalable/apps/xcedit.svg
+o ícone dele
+.El
+.Sh CÓDIGO DE SAÍDA
+.Nm cedit
+e
+.Nm xcedit
+saem com 0 em caso de sucesso e com 1 quando o terminal ou a janela não
+podem ser abertos, ou quando o
+.Fl \-lex
+não consegue ler o arquivo.
+.Sh EXEMPLOS
+Abrir um arquivo na linha 120, coluna 5:
+.Pp
+.Dl $ cedit -g src/main.c:120:5
+.Pp
+Abrir o editor com uma pasta como projeto:
+.Pp
+.Dl $ xcedit ~/projetos/site
+.Pp
+Usar a janela como editor do
+.Xr git 1 :
+.Pp
+.Dl $ EDITOR='xcedit -f' git commit
+.Pp
+Ver como um arquivo é realçado:
+.Pp
+.Dl $ cedit --lex teste.lua lua
+.Sh VEJA TAMBÉM
+.Xr git 1
+.Pp
+O manual completo, em inglês e em português:
+.Pa docs/cedit.md
+e
+.Pa docs/cedit.pt_BR.md
+nas fontes; como escrever uma linguagem:
+.Pa docs/LANGUAGES.md .
+.Sh AUTORES
+.An Leandro Vital
+.Sh OBSERVAÇÕES
+Em alguns terminais,
+.Ic Alt
+e uma letra precisam ser habilitados
+.Pq Dq meta sends escape .
+Não há servidor de linguagem (LSP).
+As expressões regulares usam backtracking: uma que demoraria demais
+numa linha muito longa pula essa linha no Search in Project.
