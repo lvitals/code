@@ -77,7 +77,7 @@ scr_scroll(int x1, int x2, int y1, int y2, int k)
 	step = k > 0 ? 1 : -1;
 	for(y = from; y != to; y += step) {
 		memmove(ROW(y) + x1, ROW(y + k) + x1, (size_t)n * sizeof(cell_t));
-		memmove(at + rowoff[y] + x1, at + rowoff[y + k] + x1, (size_t)n);
+		memmove(at + rowoff[y] + x1, at + rowoff[y + k] + x1, (size_t)n * sizeof(attr_t));
 	}
 	for(y = y1; y <= y2; y++) {	/* changed(x1, x2, y), not called */
 		if(lo[y] > x1)
