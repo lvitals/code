@@ -245,6 +245,8 @@ col_of(pos_t rs, pos_t off)
 	pos_t i = rs, n;
 	long col = 0;
 
+	if(off > buf_len())	/* past the end: buf_next would not go on */
+		off = buf_len();
 	if(!D->wrap && rs == buf_linestart(rs)) {	/* from a checkpoint */
 		ck_line(rs);
 		ck_find(0, off, &i, &col);
@@ -301,6 +303,8 @@ at_col(pos_t rs, int x)
 	int col = 0, w;
 	long c;
 
+	if(x < 0)	/* left of the text (a click on the line numbers): its start */
+		x = 0;
 	re = row_end(rs, &nx);
 	if(!D->wrap)
 		return seek_col(rs, re, x, &c);
