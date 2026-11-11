@@ -69,5 +69,8 @@ void ui_modal_begin(const char *title, int w, int h, int at, int *x, int *y);
  * keys its own, until ui_modal_end */
 void ui_modal_enter(void);
 int ui_modal_end(void);		/* 1: ESC, closed */
+/* the mouse moved to x, y: 1 when it goes onto a button, off one or from
+ * one to another (the button is drawn again, with or without F_HOVER) */
+int ui_hover_moved(int x, int y);
 
 #endif

@@ -47,7 +47,9 @@ enum {
 #define F_UNDER		0x20	/* the accelerator of a menu */
 #define F_REV		0x40	/* reversed: a focused button */
 #define F_DIM		0x80	/* behind a modal; on a float, its text greyed */
+#define F_HOVER		0x100	/* the mouse over it: a button not focused */
 #define STYLE(a)	((a) & 0x1F)
+typedef unsigned short attr_t;	/* the looks of a cell: a style and flags */
 
 /* The keys: a character, or one of these, with the modifiers.  8 BS,
  * 9 TAB, 13 ENTER, 27 ESC; Ctrl and a letter is K_CTRL | 'A', Alt and a
@@ -97,7 +99,7 @@ int term_open(int *cols, int *rows);
 void term_close(void);
 int term_size(int *cols, int *rows);	/* after K_RESIZE */
 /* n cells of row y from column x: their characters and looks */
-void term_write(int x, int y, const cell_t *ch, const unsigned char *at, int n);
+void term_write(int x, int y, const cell_t *ch, const attr_t *at, int n);
 void term_cursor(int x, int y, int visible);
 void term_flush(void);
 kcode term_key(void);		/* waits for one; K_NONE after a second

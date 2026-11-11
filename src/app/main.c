@@ -754,9 +754,11 @@ main(int argc, char **argv)
 				continue;
 			}
 		}
-		do	/* a move of the mouse matters only to an open menu */
+		do	/* a move of the mouse matters only to an open menu, and
+			   onto a button or off one (its hover) */
 			key = term_key();
-		while(key == K_MOUSE && term_mouse.kind == M_MOVE && st.menu < 0);
+		while(key == K_MOUSE && term_mouse.kind == M_MOVE && st.menu < 0 &&
+		    !ui_hover_moved(term_mouse.x, term_mouse.y));
 		if(key == K_RESIZE) {	/* a new size: all of it drawn again */
 			if(term_size(&cols, &rows) && !scr_init(cols, rows))
 				break;

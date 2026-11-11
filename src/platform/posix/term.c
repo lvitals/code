@@ -221,6 +221,8 @@ style(int at)
 		fg = bg;
 		bg = t;
 	}
+	if(at & F_HOVER)	/* the mouse over it: a tint of the text's colour */
+		bg = colours_blend(fg, bg, 1, 5);
 	snprintf(b, sizeof b, "\033[0;%s38;2;%lu;%lu;%lu;48;2;%lu;%lu;%lum", at & F_UNDER ? "4;" : "",
 	    fg >> 16, fg >> 8 & 0xFF, fg & 0xFF, bg >> 16, bg >> 8 & 0xFF, bg & 0xFF);
 	emits(b);
@@ -272,7 +274,7 @@ utf8(unsigned long c, char *s)
 }
 
 void
-term_write(int x, int y, const cell_t *ch, const unsigned char *at, int n)
+term_write(int x, int y, const cell_t *ch, const attr_t *at, int n)
 {
 	char b[32];
 	int i;

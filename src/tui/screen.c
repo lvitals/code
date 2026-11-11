@@ -10,7 +10,7 @@ int scr_cols, scr_rows;
 static cell_t *ch;
 static short *lo, *hi;		/* the columns changed in each row */
 static size_t *rowoff;		/* where each row starts */
-static unsigned char *at;
+static attr_t *at;
 #define ROW(y)		(ch + rowoff[y])
 
 int
@@ -29,12 +29,13 @@ scr_init(int cols, int rows)
 	lo = mem_alloc(2 * rows * sizeof(short));
 	rowoff = mem_alloc(rows * sizeof(size_t));
 	ch = mem_alloc(n * sizeof(cell_t));
-	at = mem_alloc(n);
+	at = mem_alloc(n * sizeof(attr_t));
 	if(!ch || !at || !lo || !rowoff)
 		return 0;
-	memset(at, S_TEXT, n);
-	for(n = 0; n < (size_t)cols * rows; n++)
+	for(n = 0; n < (size_t)cols * rows; n++) {
 		ch[n] = ' ';
+		at[n] = S_TEXT;
+	}
 	hi = lo + rows;
 	for(y = 0, n = 0; y < rows; y++, n += cols)
 		rowoff[y] = n;
@@ -92,7 +93,7 @@ set(size_t i, int x, int y, cell_t c, int a)
 	if(ch[i] == c && at[i] == a)
 		return;
 	ch[i] = c;
-	at[i] = (unsigned char)a;
+	at[i] = (attr_t)a;
 	changed(x, x, y);
 }
 
@@ -219,7 +220,7 @@ scr_fill(int x1, int y1, int x2, int y2, rune c, int a)
 {
 	int x, y, any, xa = x1 < 0 ? 0 : x1, xb = x2 >= scr_cols ? scr_cols - 1 : x2;
 	cell_t v = c < ' ' && c >= G_LAST ? G_CONTROL : (cell_t)c, *q;
-	unsigned char *r;
+	attr_t *r;
 
 	if(cwidth(c) != 1) {
 		for(y = y1; y <= y2; y++)
@@ -235,7 +236,7 @@ scr_fill(int x1, int y1, int x2, int y2, rune c, int a)
 				if(*q == CELL_WIDE && x > 0 && x == xa)
 					q[-1] = ' ', changed(x - 1, x - 1, y);
 				*q = v;
-				*r = (unsigned char)a;
+				*r = (attr_t)a;
 				any = 1;
 			}
 		if(xb + 1 < scr_cols && *q == CELL_WIDE)

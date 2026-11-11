@@ -42,7 +42,7 @@ const char plat_name[] = "xcedit";
 static GLFWwindow *win;
 static int cols, rows;			/* the grid */
 static cell_t *gch;			/* its characters */
-static unsigned char *gat;		/* their looks */
+static attr_t *gat;		/* their looks */
 static int curx = -1, cury, curon;	/* the cursor */
 static int cellw, cellh;		/* a cell, in pixels of the framebuffer */
 static float ascent;
@@ -652,6 +652,17 @@ pos_cb(GLFWwindow *w, double x, double y)
 		mouse_event(M_DRAG, mbutton, 0);
 	else
 		mouse_event(M_MOVE, 3, 0);
+}
+
+/* the mouse out of the window: a move to no cell (no button under it) */
+static void
+enter_cb(GLFWwindow *w, int entered)
+{
+	(void)w;
+	if(entered || mbutton >= 0)
+		return;
+	mx = my = -1;
+	mouse_event(M_MOVE, 3, 0);
 }
 
 static void
@@ -1562,6 +1573,8 @@ looks(int i, unsigned long *fg, unsigned long *bg)
 		*fg = *bg;
 		*bg = t;
 	}
+	if(at & F_HOVER)	/* the mouse over it: a tint of the text's colour */
+		*bg = colours_blend(*fg, *bg, 1, 5);
 }
 
 /* The frame: the backgrounds (a quad for each run of one colour), the
@@ -1705,14 +1718,14 @@ grid(void)
 {
 	int fw, fh, c, r;
 	cell_t *nc;
-	unsigned char *na;
+	attr_t *na;
 
 	glfwGetFramebufferSize(win, &fw, &fh);
 	grid_dims(fw, fh, &c, &r);
 	if(gch && c == cols && r == rows)
 		return 1;
 	nc = calloc((size_t)c * r, sizeof *nc);
-	na = calloc((size_t)c * r, 1);
+	na = calloc((size_t)c * r, sizeof *na);
 	if(nc == 0 || na == 0) {
 		free(nc);
 		free(na);
@@ -2012,6 +2025,7 @@ term_open(int *c, int *r)
 	glfwSetCharModsCallback(win, char_cb);	/* with Alt too: the char callback is not */
 	glfwSetMouseButtonCallback(win, button_cb);
 	glfwSetCursorPosCallback(win, pos_cb);
+	glfwSetCursorEnterCallback(win, enter_cb);
 	glfwSetScrollCallback(win, scroll_cb);
 	glfwSetFramebufferSizeCallback(win, size_cb);
 	glfwSetWindowSizeCallback(win, size_cb);
@@ -2067,7 +2081,7 @@ term_size(int *c, int *r)
 }
 
 void
-term_write(int x, int y, const cell_t *ch, const unsigned char *at, int n)
+term_write(int x, int y, const cell_t *ch, const attr_t *at, int n)
 {
 	if(y < 0 || y >= rows || x < 0)
 		return;
@@ -2078,10 +2092,10 @@ term_write(int x, int y, const cell_t *ch, const unsigned char *at, int n)
 	/* the same as shown (a row put again as it was: what a modal over the
 	   text does at each pass): nothing to draw */
 	if(memcmp(gch + y * cols + x, ch, (size_t)n * sizeof *ch) == 0 &&
-	   memcmp(gat + y * cols + x, at, (size_t)n) == 0)
+	   memcmp(gat + y * cols + x, at, (size_t)n * sizeof *at) == 0)
 		return;
 	memcpy(gch + y * cols + x, ch, (size_t)n * sizeof *ch);
-	memcpy(gat + y * cols + x, at, (size_t)n);
+	memcpy(gat + y * cols + x, at, (size_t)n * sizeof *at);
 	dirty = 1;
 }
 

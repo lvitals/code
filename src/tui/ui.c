@@ -9,6 +9,16 @@ size_t ui_cliplen;
 static int seen;			/* a widget had the focus */
 static int depth, inside, nmodal;	/* the modals of this pass, of the last */
 
+/* the hover: where the mouse was last, and the buttons (of the topmost
+   modal) drawn in a pass, in the last; a move of the mouse matters when it
+   goes from one of them to another, or off them (ui_hover_moved) */
+#define HOT_MAX		32
+static int hx = -1, hy = -1;
+static struct {
+	int id, x1, x2, y;
+} hot[2][HOT_MAX];
+static int nhot[2], cur;
+
 #define WELL_MAX	24
 static struct {
 	int id[WELL_MAX];
@@ -20,6 +30,10 @@ void
 ui_pass(kcode key)
 {
 	ui_key = key == K_NONE ? 0 : key;
+	if(ui_key == K_MOUSE) {
+		hx = term_mouse.x;
+		hy = term_mouse.y;
+	}
 	ui_cx = ui_cy = -1;
 	ui_again = 0;
 	seen = 0;
@@ -35,7 +49,47 @@ ui_end(int deflt)
 		ui_again = 1;
 	}
 	nmodal = depth;
+	cur = !cur;	/* the buttons of this pass, the last's now */
+	nhot[cur] = 0;
 	return ui_again;
+}
+
+/* the button (of the last pass) at x, y: its id, or -1 */
+static int
+hot_at(int x, int y)
+{
+	int i, l = !cur;
+
+	for(i = 0; i < nhot[l]; i++)
+		if(hot[l][i].y == y && x >= hot[l][i].x1 && x <= hot[l][i].x2)
+			return hot[l][i].id;
+	return -1;
+}
+
+int
+ui_hover_moved(int x, int y)
+{
+	int moved = hot_at(x, y) != hot_at(hx, hy);
+
+	hx = x;
+	hy = y;
+	return moved;
+}
+
+/* a button at x1..x2 on row y: the mouse over it (and it the topmost
+   modal's), F_HOVER; noted for ui_hover_moved */
+static int
+hover(int id, int x1, int y, int x2)
+{
+	if(!ui_mouse_ok())
+		return 0;
+	if(nhot[cur] < HOT_MAX) {
+		hot[cur][nhot[cur]].id = id;
+		hot[cur][nhot[cur]].x1 = x1;
+		hot[cur][nhot[cur]].x2 = x2;
+		hot[cur][nhot[cur]++].y = y;
+	}
+	return hy == y && hx >= x1 && hx <= x2 ? F_HOVER : 0;
 }
 
 void
@@ -184,7 +238,8 @@ int
 ui_button(int id, int x, int y, const char *s, int accel, int at)
 {
 	int w = text_width(s) + 2 + (accel && !strchr(s, accel) && !strchr(s, accel | 0x20) ? 3 : 0);
-	int f = ui_focusable(id, W_BUTTON, x, y, x + w - 1), a = f ? at | F_REV : at;
+	int f = ui_focusable(id, W_BUTTON, x, y, x + w - 1), h = hover(id, x, y, x + w - 1);
+	int a = f ? at | F_REV : at | h;
 
 	scr_put(x, y, '[', a);
 	scr_put(ui_accel(x + 1, y, s, accel, a, scr_cols), y, ']', a);
@@ -195,7 +250,8 @@ int
 ui_check(int id, int x, int y, const char *s, char *v, int at)
 {
 	int w = text_width(s) + 5;
-	int f = ui_focusable(id, W_BUTTON, x, y, x + w - 1), a = f ? at | F_REV : at;
+	int f = ui_focusable(id, W_BUTTON, x, y, x + w - 1), h = hover(id, x, y, x + w - 1);
+	int a = f ? at | F_REV : at | h;
 
 	/* [, the box, two blanks (a window draws the box wider, into the
 	   first), the label, ] */
