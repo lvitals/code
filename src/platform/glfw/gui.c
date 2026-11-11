@@ -272,19 +272,16 @@ button_of(int b)
 	    b == GLFW_MOUSE_BUTTON_RIGHT ? MB_RIGHT : -1;
 }
 
+/* a press or a release of a button at the cell mx, my: of the mouse, or
+   of a touch (touch_*) */
 static void
-button_cb(GLFWwindow *w, int b, int action, int m)
+click(int button, int press, int m)
 {
 	static double last;
 	static int lx = -1, ly = -1, lclicks;
-	double x, y, now;
-	int button = button_of(b);
+	double now;
 
-	if(button < 0)
-		return;
-	glfwGetCursorPos(w, &x, &y);
-	cell_at(x, y, &mx, &my);
-	if(action == GLFW_PRESS) {
+	if(press) {
 		/* the clicks in a row at one place: 1, 2, 3, then 1 again */
 		now = glfwGetTime();
 		term_mouse.clicks = 1;
@@ -303,6 +300,259 @@ button_cb(GLFWwindow *w, int b, int action, int m)
 		mouse_event(M_RELEASE, button, m);
 	}
 }
+
+static void
+button_cb(GLFWwindow *w, int b, int action, int m)
+{
+	double x, y;
+	int button = button_of(b);
+
+	if(button < 0)
+		return;
+	glfwGetCursorPos(w, &x, &y);
+	cell_at(x, y, &mx, &my);
+	click(button, action == GLFW_PRESS, m);
+}
+
+#ifdef TOUCH_WAYLAND
+static void pos_cb(GLFWwindow *w, double x, double y);
+
+/* A touch screen: GLFW gives none of its touches (on Wayland, not even
+ * as the mouse; on X11 the server makes them clicks of the mouse), so the
+ * window reads them itself (touch_wayland).  A finger:
+ *   a tap               a click (twice: a double click, the word ...)
+ *   moved               the text scrolls with it, as the wheel does
+ *   held, then lifted   the right button: the context menu
+ *   held, then moved    the left button held: a selection
+ * x, y: in the window's units (cell_at) */
+#define TOUCH_SLOP	8.0	/* moved this far (units of the window): not a tap */
+#define TOUCH_HOLD	0.45	/* held this long (seconds): not a tap */
+
+static struct {
+	int on;			/* a finger is down */
+	int mode;		/* 0 a tap so far, 1 scrolling, 2 selecting */
+	double x0, y0, t0;	/* where and when it touched */
+	double lx, ly;		/* where it was last */
+	double accx, accy;	/* moved, not yet scrolled */
+} touch;
+
+static void
+touch_down(double x, double y)
+{
+	touch.on = 1;
+	touch.mode = 0;
+	touch.x0 = touch.lx = x;
+	touch.y0 = touch.ly = y;
+	touch.t0 = glfwGetTime();
+	touch.accx = touch.accy = 0;
+	cell_at(x, y, &mx, &my);
+	mouse_event(M_MOVE, 3, 0);	/* the menu bar's hover, as the mouse */
+}
+
+static void
+touch_motion(double x, double y)
+{
+	int ww, wh, fw, fh;
+	double ux = 1, uy = 1, dx, dy;	/* a cell, in units of the window */
+
+	if(!touch.on)
+		return;
+	if(touch.mode == 0) {
+		dx = x - touch.x0;
+		dy = y - touch.y0;
+		if(dx * dx + dy * dy < TOUCH_SLOP * TOUCH_SLOP)
+			return;
+		if(glfwGetTime() - touch.t0 >= TOUCH_HOLD) {
+			/* held, then moved: a selection from where it touched */
+			touch.mode = 2;
+			cell_at(touch.x0, touch.y0, &mx, &my);
+			click(MB_LEFT, 1, 0);
+		} else
+			touch.mode = 1;
+	}
+	if(touch.mode == 2) {
+		pos_cb(win, x, y);
+		touch.lx = x;
+		touch.ly = y;
+		return;
+	}
+	glfwGetWindowSize(win, &ww, &wh);
+	glfwGetFramebufferSize(win, &fw, &fh);
+	if(fw > 0)
+		ux = (double)cellw * ww / fw;
+	if(fh > 0)
+		uy = (double)cellh * wh / fh;
+	/* the text follows the finger: a notch of the wheel is 3 lines, or
+	   6 columns (editor.c) */
+	touch.accy += y - touch.ly;
+	touch.accx += x - touch.lx;
+	touch.lx = x;
+	touch.ly = y;
+	cell_at(x, y, &mx, &my);
+	for(; touch.accy >= 3 * uy; touch.accy -= 3 * uy)
+		mouse_event(M_WHEELUP, 0, 0);
+	for(; touch.accy <= -3 * uy; touch.accy += 3 * uy)
+		mouse_event(M_WHEELDOWN, 0, 0);
+	for(; touch.accx >= 6 * ux; touch.accx -= 6 * ux)
+		mouse_event(M_WHEELLEFT, 0, 0);
+	for(; touch.accx <= -6 * ux; touch.accx += 6 * ux)
+		mouse_event(M_WHEELRIGHT, 0, 0);
+}
+
+static void
+touch_up(void)
+{
+	if(!touch.on)
+		return;
+	touch.on = 0;
+	if(touch.mode == 2) {
+		cell_at(touch.lx, touch.ly, &mx, &my);
+		click(MB_LEFT, 0, 0);
+	} else if(touch.mode == 0) {
+		cell_at(touch.x0, touch.y0, &mx, &my);
+		if(glfwGetTime() - touch.t0 >= TOUCH_HOLD) {
+			click(MB_RIGHT, 1, 0);
+			click(MB_RIGHT, 0, 0);
+		} else {
+			click(MB_LEFT, 1, 0);
+			click(MB_LEFT, 0, 0);
+		}
+	}
+}
+
+/* the touch taken away (by the compositor: a gesture of its own) */
+static void
+touch_cancel(void)
+{
+	if(touch.on && touch.mode == 2)
+		click(MB_LEFT, 0, 0);
+	touch.on = 0;
+}
+
+/* Wayland: the window's own wl_touch, on the display GLFW has (its events
+   come in glfwPollEvents, on the default queue).  The first finger alone;
+   the others are not seen */
+#include <wayland-client.h>
+#define GLFW_EXPOSE_NATIVE_WAYLAND
+#include <GLFW/glfw3native.h>
+
+static struct wl_touch *wtouch;
+static int32_t wfinger = -1;	/* the id of the finger followed */
+
+static void
+wt_down(void *d, struct wl_touch *t, uint32_t serial, uint32_t time,
+    struct wl_surface *s, int32_t id, wl_fixed_t x, wl_fixed_t y)
+{
+	(void)d; (void)t; (void)serial; (void)time;
+	if(wfinger >= 0 || s != glfwGetWaylandWindow(win))
+		return;	/* another finger, or the title bar (libdecor's) */
+	wfinger = id;
+	touch_down(wl_fixed_to_double(x), wl_fixed_to_double(y));
+}
+
+static void
+wt_up(void *d, struct wl_touch *t, uint32_t serial, uint32_t time, int32_t id)
+{
+	(void)d; (void)t; (void)serial; (void)time;
+	if(id != wfinger)
+		return;
+	wfinger = -1;
+	touch_up();
+}
+
+static void
+wt_motion(void *d, struct wl_touch *t, uint32_t time, int32_t id, wl_fixed_t x, wl_fixed_t y)
+{
+	(void)d; (void)t; (void)time;
+	if(id == wfinger)
+		touch_motion(wl_fixed_to_double(x), wl_fixed_to_double(y));
+}
+
+static void
+wt_frame(void *d, struct wl_touch *t)
+{
+	(void)d; (void)t;
+}
+
+static void
+wt_cancel(void *d, struct wl_touch *t)
+{
+	(void)d; (void)t;
+	wfinger = -1;
+	touch_cancel();
+}
+
+static const struct wl_touch_listener wt_listener = {	/* version 5: no shape */
+	.down = wt_down, .up = wt_up, .motion = wt_motion, .frame = wt_frame,
+	.cancel = wt_cancel
+};
+
+static void
+seat_caps(void *d, struct wl_seat *seat, uint32_t caps)
+{
+	(void)d;
+	if((caps & WL_SEAT_CAPABILITY_TOUCH) && wtouch == 0) {
+		wtouch = wl_seat_get_touch(seat);
+		wl_touch_add_listener(wtouch, &wt_listener, 0);
+	} else if(!(caps & WL_SEAT_CAPABILITY_TOUCH) && wtouch != 0) {
+		wl_touch_destroy(wtouch);
+		wtouch = 0;
+		wfinger = -1;
+		touch_cancel();
+	}
+}
+
+static void
+seat_name(void *d, struct wl_seat *seat, const char *name)
+{
+	(void)d; (void)seat; (void)name;
+}
+
+static const struct wl_seat_listener seat_listener = {
+	.capabilities = seat_caps, .name = seat_name
+};
+
+static void
+reg_global(void *d, struct wl_registry *r, uint32_t name, const char *iface, uint32_t version)
+{
+	struct wl_seat *seat;
+
+	(void)d;
+	if(strcmp(iface, "wl_seat") != 0 || wtouch != 0)
+		return;	/* a seat: the first that has a touch screen */
+	seat = wl_registry_bind(r, name, &wl_seat_interface, version < 5 ? version : 5);
+	wl_seat_add_listener(seat, &seat_listener, 0);
+}
+
+static void
+reg_remove(void *d, struct wl_registry *r, uint32_t name)
+{
+	(void)d; (void)r; (void)name;
+}
+
+static const struct wl_registry_listener reg_listener = {
+	.global = reg_global, .global_remove = reg_remove
+};
+
+static void
+touch_open(void)
+{
+	struct wl_display *dpy;
+	struct wl_registry *reg;
+
+	if(glfwGetPlatform() != GLFW_PLATFORM_WAYLAND || (dpy = glfwGetWaylandDisplay()) == 0)
+		return;
+	reg = wl_display_get_registry(dpy);
+	wl_registry_add_listener(reg, &reg_listener, 0);
+	wl_display_roundtrip(dpy);	/* the seats */
+	wl_display_roundtrip(dpy);	/* their capabilities */
+}
+#else
+static void
+touch_open(void)
+{
+}
+#endif
 
 static void
 pos_cb(GLFWwindow *w, double x, double y)
@@ -1684,6 +1934,7 @@ term_open(int *c, int *r)
 	glfwSetWindowSizeCallback(win, size_cb);
 	glfwSetWindowRefreshCallback(win, refresh_cb);
 	glfwSetWindowCloseCallback(win, close_cb);
+	touch_open();
 	glfwSetCursor(win, glfwCreateStandardCursor(GLFW_IBEAM_CURSOR));
 	if(!wayland())	/* Wayland takes the icon of xcedit.desktop */
 		window_icon();

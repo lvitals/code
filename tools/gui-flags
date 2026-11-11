@@ -4,19 +4,34 @@
 #   sh tools/gui-flags --libs       to link xcedit
 # GLFW 3 by pkg-config; OpenGL by pkg-config too, but on macOS, where it is
 # a framework.  stb_truetype is in the sources (src/platform/glfw).
+# Where wayland-client is (Linux, the BSDs), the window reads a touch
+# screen on Wayland itself (TOUCH_WAYLAND: GLFW gives none of its touches);
+# XCEDIT_NO_TOUCH=1 leaves it out (a GLFW made without Wayland).
+touch() {
+	[ "$(uname)" != Darwin ] && [ -z "$XCEDIT_NO_TOUCH" ] &&
+	    pkg-config --exists wayland-client 2>/dev/null
+}
 case "$1" in
 --cflags)
 	if [ "$(uname)" = Darwin ]; then
 		echo "$(pkg-config --cflags glfw3) -DGL_SILENCE_DEPRECATION"
 	else
-		pkg-config --cflags glfw3 gl
+		if touch; then
+			echo "$(pkg-config --cflags glfw3 gl wayland-client) -DTOUCH_WAYLAND"
+		else
+			pkg-config --cflags glfw3 gl
+		fi
 	fi
 	;;
 --libs)
 	if [ "$(uname)" = Darwin ]; then
 		echo "$(pkg-config --libs glfw3) -framework OpenGL -lm"
 	else
-		echo "$(pkg-config --libs glfw3 gl) -lm"
+		if touch; then
+			echo "$(pkg-config --libs glfw3 gl wayland-client) -lm"
+		else
+			echo "$(pkg-config --libs glfw3 gl) -lm"
+		fi
 	fi
 	;;
 *)

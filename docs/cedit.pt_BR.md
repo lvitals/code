@@ -604,6 +604,10 @@ números de linha).
   transferência do sistema.
 - As teclas e o mouse se comportam como no terminal.  Nos diálogos,
   Ctrl+H mostra ou esconde os arquivos ocultos (Alt+H no terminal).
+- **Tela de toque** (Wayland): um toque é um clique (dois toques, um
+  clique duplo); o dedo arrastado rola o texto, as listas e os menus;
+  segurado e solto, abre o menu de contexto; segurado e arrastado,
+  seleciona.  No X11 o sistema transforma os toques em cliques do mouse.
 - **O terminal**: veja a [seção 2](#2-iniciar-o-editor) (`-f`).
 
 ## 15. Configurações

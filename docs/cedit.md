@@ -599,6 +599,10 @@ For the fastest opening of a huge file, use `-n` (no line numbers).
   copied; what the editor copies goes to the system clipboard.
 - The keys and the mouse behave as in the terminal.  In dialogs, Ctrl+H
   toggles hidden files (Alt+H in a terminal).
+- **Touch screen** (Wayland): a tap is a click (two taps, a double
+  click); a finger moved scrolls the text, the lists and the menus; held
+  and then lifted, it opens the context menu; held and then moved, it
+  selects.  On X11 the system turns the touches into clicks of the mouse.
 - **The terminal**: see [section 2](#2-starting-the-editor) (`-f`).
 
 ## 15. Settings
