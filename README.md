@@ -26,19 +26,28 @@ make clean
 
 `cedit` needs a C99 compiler and a POSIX system (termios, dirent, poll,
 pthreads: `-pthread`, which alefc takes too);
-`xcedit` also GLFW 3, OpenGL and the stb headers (`/usr/include/stb`).
+`xcedit` also GLFW 3 and OpenGL (stb_truetype, which draws the
+characters, is in the sources: `src/platform/glfw/stb_truetype.h`).  The
+Makefile is a POSIX make's: the `make` of each system builds it.
 
 The packages, on Arch Linux:
 
 ```
-sudo pacman -S --needed base-devel glfw libglvnd mesa stb pkgconf
+sudo pacman -S --needed base-devel glfw libglvnd mesa pkgconf
 ```
 
 On Debian (and Ubuntu):
 
 ```
-sudo apt install build-essential libglfw3-dev libgl-dev libgl1-mesa-dri libstb-dev pkgconf
+sudo apt install build-essential libglfw3-dev libgl-dev libgl1-mesa-dri pkgconf
 ```
+
+On macOS, FreeBSD, OpenBSD and NetBSD the sources are the same (POSIX
+and C99; what differs is in `src/platform/posix`: the time of a file,
+macOS's Trash), and so is the Makefile: `make` there as here.  For
+`xcedit`: GLFW 3 and `pkg-config` from the packages (`pkg`, `pkg_add`,
+pkgsrc, Homebrew); OpenGL is the system's (on macOS, its framework).
+`tools/gui-flags` (sh) gives their flags to the Makefile.
 
 For `cedit` alone (`make cedit`) the compiler is enough: `base-devel` on
 Arch, `build-essential` on Debian.  `xcedit` takes more memory than
@@ -112,7 +121,16 @@ icon.  The settings are in `~/.config/cedit/settings.json`, for both.
   names that start with the one typed, and the warning before a file is
   written over.  The hidden files (.name) are shown or not with Alt+H
   (Ctrl+H in a window) or the box Hidden; kept in the settings
-  (`"show_hidden_files"`).
+  (`"show_hidden_files"`).  In Open File, Save As and Open Project
+  Folder alike, the folders are managed: Alt+N or [New Folder] asks for
+  a name in the field (Enter makes the folder and goes into it, Esc does
+  not; Save As keeps the file's name), and Del (on the list, or with
+  nothing typed) or [Trash (Del)] moves the folder chosen to the Trash
+  of the desktop, once Yes is said: the freedesktop.org Trash
+  (`~/.local/share/Trash`, or `.Trash-UID` at the top of another disk),
+  the one the file managers of GNOME, KDE, Xfce show and restore from.
+  The project's folder, the home, and a folder with a file open in the
+  editor are not moved.
 - Unsaved Changes on Close and Exit, the errors, About.
 - The status bar: the language, LF/CRLF (a button), the encoding (a
   button: see Encodings below), the project (a button: Open Project
@@ -152,7 +170,8 @@ icon.  The settings are in `~/.config/cedit/settings.json`, for both.
   of their own for Diff, Markdown, XML and HTML, and key=value files.
   A language is known by its file's name, its suffix, the end of its
   path, its #! line, else its first lines.  To add one: copy
-  `docs/lang_template.c`, add a line to `src/app/langs/all.h`, and see
+  `docs/lang_template.c`, add a line to `src/app/langs/all.h` and its
+  object to `LANGS` in the Makefile (`make check-langs` tells), and see
   what it makes of a file with `cedit --lex FILE`; the guide is
   `docs/LANGUAGES.md`.
 - Highlight Matching Brackets (View): at the cursor, a bracket or what

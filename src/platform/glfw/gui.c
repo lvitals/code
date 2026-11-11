@@ -18,7 +18,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <GLFW/glfw3.h>
+#if defined(__APPLE__)
+#include <OpenGL/gl.h>
+#else
 #include <GL/gl.h>
+#endif
 #include "stb_truetype.h"
 #include "../platform.h"
 #include "../colours.h"
@@ -842,6 +846,27 @@ font_lookup(const char *name, char *path, int max, int *index)
 			font_folder(&w, dir, 0);
 		}
 	}
+	/* the fonts of the system where they are not in XDG_DATA_DIRS: those
+	   of macOS; of X11 on OpenBSD and NetBSD */
+	{
+		static const char *const sys[] = {
+#if defined(__APPLE__)
+			"~/Library/Fonts", "/Library/Fonts", "/System/Library/Fonts",
+#endif
+			"/usr/X11R6/lib/X11/fonts", "/usr/pkg/share/fonts",
+		};
+		size_t i;
+
+		for(i = 0; w.rank < 3 && i < sizeof sys / sizeof sys[0]; i++) {
+			if(sys[i][0] == '~') {
+				if(home == 0 || strlen(home) + strlen(sys[i]) >= sizeof dir)
+					continue;
+				snprintf(dir, sizeof dir, "%s%s", home, sys[i] + 1);
+			} else
+				snprintf(dir, sizeof dir, "%s", sys[i]);
+			font_folder(&w, dir, 0);
+		}
+	}
 	if(w.rank == 0 || (int)strlen(w.path) >= max)
 		return 0;
 	strcpy(path, w.path);
@@ -1616,6 +1641,12 @@ term_open(int *c, int *r)
 	GLFWmonitor *mon;
 
 	background();
+	/* GIO of local files alone: on GNOME the title bar is GTK's (libdecor),
+	   and GTK asks the gvfs daemons (gvfsd-metadata, ...) as it starts; one
+	   of them that hangs would hold the window from opening (and git commit
+	   waiting for it).  The editor reads its files itself: it needs none
+	   of them.  Unless the environment says otherwise */
+	setenv("GIO_USE_VFS", "local", 0);
 	glfwSetErrorCallback(error_cb);
 	if(!glfwInit())
 		return 0;

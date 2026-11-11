@@ -177,6 +177,12 @@ int plat_run(const char *cmd, const char *dir, const char *in, size_t n,
 void plat_cwd(char *buf, int max);	/* the current directory, ended
 					   by its separator */
 int plat_chdir(const char *path);	/* it made the current one: 0 if not */
+/* a new folder: 0, or why it was not made */
+const char *dir_make(const char *path);
+/* a file or a folder moved to the Trash of the desktop (the freedesktop.org
+ * Trash: the one the file managers show, and restore from): 0, or why it
+ * was not moved */
+const char *plat_trash(const char *path);
 extern const char path_sep;		/* '/' or '\\' */
 /* the drives (bit 0 is A:), when the root has a parent: the list of them */
 unsigned plat_drives(void);

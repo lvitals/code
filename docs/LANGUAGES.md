@@ -20,7 +20,9 @@ docs/lang_template.c      a model with every field, to copy
 1. Copy the model: `cp docs/lang_template.c src/app/langs/foo.c`.
 2. Fill it in, and delete the fields the language does not use.
 3. Add `LANG(foo)` to `src/app/langs/all.h`, keeping the list in
-   alphabetical order.
+   alphabetical order, and `src/app/langs/foo.o` to `LANGS` in the
+   Makefile (a POSIX make has no wildcard: `make check-langs` tells of
+   one forgotten).
 4. Run `make`.
 5. Check the result with `build/cedit --lex example.foo`, or open the file
    in the editor.
@@ -189,6 +191,7 @@ large files fast.
 - [ ] `src/app/langs/NAME.c` has `.name`, `.title` and at least one of
       `.extensions`, `.filenames` or `.interpreters`.
 - [ ] `LANG(NAME)` is in `src/app/langs/all.h`, in alphabetical order.
+- [ ] `src/app/langs/NAME.o` is in `LANGS` in the Makefile (`make check-langs`).
 - [ ] `make` builds with no warnings, under gcc and under clang.
 - [ ] `build/cedit --lex` on a real file of the language shows what is
       expected: keywords, strings, comments, and the language on the first

@@ -66,7 +66,7 @@ enum {
 	ID_ST_NL, ID_ST_ENC, ID_ST_INDENT, ID_ST_PROJECT, ID_ST_FILE, ID_ST_OVR,
 	ID_IND_TYPE, ID_IND_WIDTH, ID_ENC_LIST, ID_ENC_SAVE, ID_ENC_REOPEN,
 	ID_OK, ID_YES, ID_NO, ID_CANCEL, ID_GOTO, ID_LIST,
-	ID_P_NAME, ID_P_LIST, ID_P_SUGGEST, ID_P_HIDDEN, ID_P_FOLDER, ID_FILTER, ID_FINDER
+	ID_P_NAME, ID_P_LIST, ID_P_SUGGEST, ID_P_HIDDEN, ID_P_FOLDER, ID_P_NEWDIR, ID_P_TRASH, ID_FILTER, ID_FINDER
 };
 
 enum { SEARCH_HIDDEN, SEARCH_FIND, SEARCH_REPLACE };
@@ -83,6 +83,7 @@ struct state {
 	char pdir[PATH_MAX_];
 	struct edl pname;
 	char *overwrite;	/* the file the warning is about */
+	char *trash;		/* the folder to move to the Trash, if Yes */
 
 	int mx, my;	/* where the context menu opens */
 	char mdrag;	/* a button held since the menu opened */
@@ -269,6 +270,7 @@ void draw_goto(void);
 void draw_unsaved(void);
 void draw_errors(void);
 void draw_overwrite(void);
+void draw_trash(void);
 void draw_gotofile(void);
 void draw_exit(void);
 void draw_save(void);
@@ -282,8 +284,10 @@ void draw_picker(void);
 extern char *pk_names;
 extern unsigned *pk_ents;
 extern int pk_n, pk_loaded, pk_sel, pk_top;
+extern char pk_making;	/* picker.c: the field asks for a new folder's name */
 void picker_open(int kind);
 void close_picker(void);
 void picker_finish(const char *path);
+void picker_trash(const char *path);	/* picker.c: Yes to draw_trash */
 
 #endif

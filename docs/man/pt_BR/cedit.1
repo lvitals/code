@@ -341,6 +341,18 @@ mostra ou esconde os arquivos ocultos.
 .Pp
 O Save As tem, no lugar, um campo File name, com os nomes que começam
 com o digitado, e pergunta antes de gravar por cima de um arquivo.
+.Pp
+Nos três diálogos (Open File, Save As, Open Project Folder),
+.Ic Alt+N
+ou o botão New Folder pede um nome e cria essa pasta dentro da pasta
+mostrada, entrando nela
+.Pq Ic Esc No cancela ;
+.Ic Del
+na lista, ou o botão Trash, move a pasta escolhida para a Lixeira do
+desktop (a Lixeira do freedesktop.org, que os gerenciadores de arquivos
+mostram e de onde restauram), depois de confirmado.
+A pasta do projeto, a pasta pessoal e uma pasta com um arquivo aberto
+no editor não são movidas.
 Salvar grava um arquivo novo e o renomeia por cima do antigo, mantendo
 as permissões.
 .Sh O PROJETO
@@ -543,6 +555,13 @@ grava cada evento que recebe.
 .Bl -tag -width Ds -compact
 .It Pa ~/.config/cedit/settings.json
 as configurações
+.It Pa ~/.local/share/Trash
+a Lixeira para onde as pastas são movidas
+.Po ou
+.Ev XDG_DATA_HOME Ns Pa /Trash ;
+.Pa .Trash-UID
+no topo de outro disco
+.Pc
 .It Pa share/applications/xcedit.desktop
 a entrada do
 .Nm xcedit

@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #if defined(__linux__)
 #include <sys/ioctl.h>
 #ifndef FICLONE
@@ -26,6 +27,15 @@
 #endif
 #include <unistd.h>
 #include "../platform.h"
+
+/* the nanoseconds of a file's time of change: POSIX.1-2008 has st_mtim
+ * (Linux, FreeBSD, OpenBSD, NetBSD); macOS, in its POSIX mode, has
+ * st_mtimensec */
+#if defined(__APPLE__)
+#define MTIME_NSEC(s)	((s).st_mtimensec)
+#else
+#define MTIME_NSEC(s)	((s).st_mtim.tv_nsec)
+#endif
 
 const int file_crlf = 0;
 const char path_sep = '/';
@@ -127,8 +137,8 @@ file_stamp(const char *name)
 	v[0] = (unsigned long long)s.st_dev;
 	v[1] = (unsigned long long)s.st_ino;
 	v[2] = (unsigned long long)s.st_size;
-	v[3] = (unsigned long long)s.st_mtim.tv_sec;
-	v[4] = (unsigned long long)s.st_mtim.tv_nsec;
+	v[3] = (unsigned long long)s.st_mtime;
+	v[4] = (unsigned long long)MTIME_NSEC(s);
 	for(i = 0; i < 5; i++)
 		h = (h ^ v[i]) * 1099511628211ULL;
 	return (pos_t)h | 1;
@@ -501,6 +511,262 @@ plat_chdir(const char *path)
 {
 	return chdir(path) == 0;
 }
+
+const char *
+dir_make(const char *path)
+{
+	return mkdir(path, 0777) == 0 ? 0 : strerror(errno);
+}
+
+/* --- the Trash ------------------------------------------------------------
+ *
+ * As the freedesktop.org Trash specification has it, so that the file
+ * managers of GNOME, KDE, Xfce, ... show what was moved and restore it:
+ *
+ *   TRASH/files/NAME             what was moved (renamed: never copied)
+ *   TRASH/info/NAME.trashinfo    where it was, and when:
+ *
+ *       [Trash Info]
+ *       Path=/home/me/project/old%20notes
+ *       DeletionDate=2026-11-11T15:30:00
+ *
+ * TRASH is the home's ($XDG_DATA_HOME/Trash, ~/.local/share/Trash) for
+ * what is on the same file system; else the one at the top of the file
+ * system of what is moved: $top/.Trash/$uid (when $top/.Trash is a
+ * folder with the sticky bit, not a link), else $top/.Trash-$uid, and
+ * Path is then relative to $top.  NAME is the name, or NAME.2, NAME.3,
+ * ... when it is taken: its .trashinfo is made first (O_EXCL), so two
+ * programs cannot take the same one.
+ *
+ * macOS has a Trash of its own, the Finder's: ~/.Trash for the home's
+ * disk, $top/.Trashes/$uid for another; what is moved there keeps its name
+ * ("name 2", "name 3", ... when it is taken), and has no .trashinfo. */
+
+/* dir made, with its parents (0700): 0 if it cannot be */
+static int
+make_dirs(char *dir)
+{
+	struct stat s;
+	char *p;
+
+	if(stat(dir, &s) == 0)
+		return S_ISDIR(s.st_mode);
+	for(p = dir + 1; *p; p++)
+		if(*p == '/') {
+			*p = 0;
+			if(mkdir(dir, 0700) < 0 && errno != EEXIST) {
+				*p = '/';
+				return 0;
+			}
+			*p = '/';
+		}
+	return mkdir(dir, 0700) == 0 || errno == EEXIST;
+}
+
+/* the top of the file system of path (on dev): the last folder going up
+ * from it that is still on dev ("/" when the root is) */
+static void
+fs_top(const char *path, dev_t dev, char *top, size_t max)
+{
+	struct stat s;
+	char *p;
+	size_t n = strlen(path);
+
+	if(n >= max) {
+		strcpy(top, "/");
+		return;
+	}
+	memcpy(top, path, n + 1);
+	while((p = (strrchr)(top, '/')) != 0) {	/* the function: not glibc's C23 macro */
+		if(p == top) {	/* its parent is the root */
+			if(stat("/", &s) == 0 && s.st_dev == dev)
+				strcpy(top, "/");
+			return;
+		}
+		*p = 0;		/* the parent */
+		if(stat(top, &s) < 0 || s.st_dev != dev) {
+			*p = '/';	/* another file system: the one below it */
+			return;
+		}
+	}
+}
+
+#if !defined(__APPLE__)
+/* the trash of the top of a file system: its folder, or 0 */
+static int
+top_trash(const char *top, char *trash, size_t max)
+{
+	struct stat s;
+	char t[4096];
+	const char *sep = strcmp(top, "/") == 0 ? "" : "/";
+	unsigned long uid = (unsigned long)getuid();
+
+	if(snprintf(t, sizeof t, "%s%s.Trash", top, sep) >= (int)sizeof t)
+		return 0;
+	if(lstat(t, &s) == 0 && S_ISDIR(s.st_mode) && (s.st_mode & S_ISVTX) &&
+	   snprintf(trash, max, "%s/%lu", t, uid) < (int)max && make_dirs(trash))
+		return 1;
+	return snprintf(trash, max, "%s%s.Trash-%lu", top, sep, uid) < (int)max &&
+	    make_dirs(trash);
+}
+
+/* s, %-encoded as a URL's path (the bytes not plain, and not /) */
+static int
+url_path(const char *s, char *out, size_t max)
+{
+	static const char hex[] = "0123456789ABCDEF";
+	size_t n = 0;
+	unsigned char c;
+
+	for(; (c = (unsigned char)*s) != 0; s++) {
+		if(n + 4 > max)
+			return 0;
+		if((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+		   (strchr)("-._~/!$&'()*+,;=:@", c))
+			out[n++] = (char)c;
+		else {
+			out[n++] = '%';
+			out[n++] = hex[c >> 4];
+			out[n++] = hex[c & 15];
+		}
+	}
+	out[n] = 0;
+	return 1;
+}
+#endif
+
+#if defined(__APPLE__)
+const char *
+plat_trash(const char *path)
+{
+	char abs[4096], trash[4096], top[4096], dest[8300];
+	const char *home = getenv("HOME"), *base;
+	struct stat s, hs;
+	int i;
+
+	if(realpath(path, abs) == 0)
+		return strerror(errno);
+	if(strcmp(abs, "/") == 0)
+		return "The root cannot be moved to the Trash";
+	if(lstat(abs, &s) < 0)
+		return strerror(errno);
+	base = strrchr(abs, '/') + 1;
+	trash[0] = 0;
+	if(home && *home)
+		snprintf(trash, sizeof trash, "%s/.Trash", home);
+	if(!(trash[0] && make_dirs(trash) && stat(trash, &hs) == 0 && hs.st_dev == s.st_dev)) {
+		fs_top(abs, s.st_dev, top, sizeof top);
+		if(snprintf(trash, sizeof trash, "%s%s.Trashes/%lu", top,
+		    strcmp(top, "/") == 0 ? "" : "/", (unsigned long)getuid()) >= (int)sizeof trash ||
+		   !make_dirs(trash))
+			return "There is no Trash on its disk";
+	}
+	if(strncmp(abs, trash, strlen(trash)) == 0 &&
+	   (abs[strlen(trash)] == '/' || abs[strlen(trash)] == 0))
+		return "It is in the Trash";
+	for(i = 1; i < 10000; i++) {
+		if(i == 1)
+			snprintf(dest, sizeof dest, "%s/%s", trash, base);
+		else
+			snprintf(dest, sizeof dest, "%s/%s %d", trash, base, i);
+		if(lstat(dest, &hs) < 0 && errno == ENOENT)
+			break;
+	}
+	if(i == 10000)
+		return "No name is free in the Trash";
+	if(rename(abs, dest) < 0)
+		return strerror(errno);
+	return 0;
+}
+#else
+const char *
+plat_trash(const char *path)
+{
+	char abs[4096], trash[4096], dir[4200], info[5200], dest[5200], url[12288];
+	char name[1024], when[32], text[12400];
+	const char *home = getenv("HOME"), *data = getenv("XDG_DATA_HOME"), *base, *rel;
+	struct stat s, hs;
+	struct tm tm;
+	time_t now;
+	size_t n;
+	int fd = -1, i, len;
+
+	/* the path whole, without a / at its end */
+	if(realpath(path, abs) == 0)
+		return strerror(errno);
+	if(strcmp(abs, "/") == 0)
+		return "The root cannot be moved to the Trash";
+	if(lstat(abs, &s) < 0)
+		return strerror(errno);
+	base = (strrchr)(abs, '/') + 1;
+	if(strlen(base) + 8 >= sizeof name)
+		return "The name is too long";
+
+	/* the home's trash, on the same file system; else the top's */
+	trash[0] = 0;
+	if(data && *data == '/')
+		snprintf(trash, sizeof trash, "%s/Trash", data);
+	else if(home && *home)
+		snprintf(trash, sizeof trash, "%s/.local/share/Trash", home);
+	rel = abs;	/* Path=: whole, in the home's */
+	if(trash[0] && make_dirs(trash) && stat(trash, &hs) == 0 && hs.st_dev == s.st_dev) {
+		;
+	} else {
+		fs_top(abs, s.st_dev, dir, sizeof dir);
+		if(!top_trash(dir, trash, sizeof trash))
+			return "There is no Trash on its disk";
+		n = strlen(dir);
+		rel = abs + (strcmp(dir, "/") == 0 ? 1 : n + (abs[n] == '/'));
+	}
+	snprintf(dir, sizeof dir, "%s/files", trash);
+	snprintf(info, sizeof info, "%s/info", trash);
+	if(!make_dirs(dir) || !make_dirs(info))
+		return "The Trash cannot be made";
+	if(strncmp(abs, trash, strlen(trash)) == 0 &&
+	   (abs[strlen(trash)] == '/' || abs[strlen(trash)] == 0))
+		return "It is in the Trash";
+
+	/* a name of its own in the Trash: its .trashinfo made first */
+	for(i = 1; i < 10000; i++) {
+		if(i == 1)
+			snprintf(name, sizeof name, "%s", base);
+		else
+			snprintf(name, sizeof name, "%s.%d", base, i);
+		if(snprintf(info, sizeof info, "%s/info/%s.trashinfo", trash, name) >= (int)sizeof info ||
+		   snprintf(dest, sizeof dest, "%s/files/%s", trash, name) >= (int)sizeof dest)
+			return "The name is too long";
+		if(lstat(dest, &hs) == 0)
+			continue;
+		if((fd = open(info, O_WRONLY | O_CREAT | O_EXCL, 0600)) >= 0)
+			break;
+		if(errno != EEXIST)
+			return strerror(errno);
+	}
+	if(fd < 0)
+		return "No name is free in the Trash";
+	now = time(0);
+	localtime_r(&now, &tm);
+	strftime(when, sizeof when, "%Y-%m-%dT%H:%M:%S", &tm);
+	if(!url_path(rel, url, sizeof url)) {
+		close(fd);
+		unlink(info);
+		return "The name is too long";
+	}
+	len = snprintf(text, sizeof text, "[Trash Info]\nPath=%s\nDeletionDate=%s\n", url, when);
+	if(len <= 0 || len >= (int)sizeof text || write(fd, text, (size_t)len) != len ||
+	   close(fd) < 0) {
+		unlink(info);
+		return "The Trash cannot be written";
+	}
+	if(rename(abs, dest) < 0) {
+		const char *why = strerror(errno);
+
+		unlink(info);
+		return why;
+	}
+	return 0;
+}
+#endif
 
 void
 plat_cwd(char *buf, int max)

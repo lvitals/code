@@ -45,8 +45,12 @@ Requirements:
 
 - `cedit`: a C99 compiler and a POSIX system (termios, dirent, poll,
   POSIX threads).
-- `xcedit`: also GLFW 3, OpenGL and the stb headers
-  (`/usr/include/stb`).
+- `xcedit`: also GLFW 3 and OpenGL.  stb_truetype, which draws the
+  characters, is part of the sources.
+
+The systems: Linux, macOS, FreeBSD, OpenBSD and NetBSD, from the same
+sources (POSIX and C99).  The Makefile is for any POSIX make, so the
+`make` of each system builds it; on macOS OpenGL is its framework.
 
 ```
 make                 # build/cedit and build/xcedit
@@ -355,6 +359,34 @@ Save As has a **File name** field instead of a search, because the name
 must be typed.  Below it, the names in the folder that start with what
 is typed are listed.  Saving over an existing file asks first.
 
+### New Folder and Move to Trash
+
+Open File, Save As and Open Project Folder manage the folders the same
+way, with two buttons at the bottom:
+
+- **New Folder** (Alt+N): the field asks for the folder's name ("New
+  folder:").  Enter makes it in the folder shown and goes into it; Esc
+  goes back to what was there.  In Save As the file name typed before is
+  kept, so the file can be saved in the new folder at once.
+- **Trash (Del)**: moves the folder chosen in the list to the Trash,
+  after a confirmation (Yes, No).  Del works on the list, or in the
+  field when nothing is typed (otherwise Del edits the text).
+
+The Trash is the desktop's own (the freedesktop.org Trash
+specification): `~/.local/share/Trash` (or `$XDG_DATA_HOME/Trash`) for
+folders on the same disk as the home, else `.Trash-UID` at the top of
+the other disk.  The folders moved there show in the Trash of GNOME
+Files, Dolphin, Thunar, Caja and Nemo, and can be restored from it.  A
+folder is moved, never copied nor deleted.  The editor does it itself
+(POSIX: `rename`, `mkdir`, the `.trashinfo` written), with no library of
+a desktop; on a system without a desktop the folders wait in that
+folder all the same.  On macOS the Trash is the Finder's: `~/.Trash`
+(`.Trashes/UID` on another disk).
+
+Not moved, with the reason shown: the project folder (or a folder that
+contains it), the home folder, and a folder with a file open in the
+editor.
+
 ### How files are saved
 
 A save writes a new file next to the old one and renames it over it,
@@ -521,8 +553,9 @@ from, in order: its file name, its suffix, the end of its path, its
 
 Each language is a small C file in `src/app/langs/` that lists its
 suffixes, keywords, types, comments, strings and blocks.  To add one,
-copy `docs/lang_template.c`, add a line to `src/app/langs/all.h`, and
-check the result with `cedit --lex FILE`.  The full guide is
+copy `docs/lang_template.c`, add a line to `src/app/langs/all.h` and
+its object to `LANGS` in the Makefile (`make check-langs` tells of one
+forgotten), and check the result with `cedit --lex FILE`.  The full guide is
 [LANGUAGES.md](LANGUAGES.md).
 
 There is no language server.
@@ -642,6 +675,8 @@ enabled ("meta sends escape").
 | Ctrl+Shift+S | Save As |
 | Ctrl+W | Close File |
 | Ctrl+Q | Exit |
+| Alt+N (in Open, Save As, Open Project Folder) | New Folder |
+| Del (in the same, on the list) | Move the folder to the Trash |
 
 ### Editing
 
@@ -705,6 +740,7 @@ enabled ("meta sends escape").
 | `XCEDIT_SNAPSHOT=file.ppm` | Testing: xcedit writes each frame as an image |
 | `XCEDIT_TRACE=file` | Testing: xcedit writes each event it receives |
 | `.gitignore`, `.ignore`, `.git/info/exclude` | Files left out of the project searches |
+| `$XDG_DATA_HOME/Trash` (`~/.local/share/Trash`), `.Trash-UID` | The Trash folders are moved to |
 
 ### Exit status
 

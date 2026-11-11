@@ -3,7 +3,12 @@
  * list under it), the entries of the folder (.., the directories, the
  * files; for Open Project Folder, the directories alone) and the warning before a
  * file is written over.  At the root of
- * a drive, .. lists the drives (on a platform that has them). */
+ * a drive, .. lists the drives (on a platform that has them).
+ *
+ * In the three, the folders are managed alike: Alt+N or [New Folder]
+ * asks for a name in the field (Enter makes the folder and goes into it,
+ * Esc does not), Del or [Trash] moves the folder chosen to the Trash of
+ * the desktop, asked first (dialogs.c: draw_trash). */
 #include <stdlib.h>
 #include <string.h>
 #include "finder.h"
@@ -370,33 +375,207 @@ folder_take(int r, int project)
 	picker_finish(path);
 }
 
+/* --- New Folder and Move to Trash ---------------------------------------- */
+
+#define making		pk_making	/* the field names a new folder */
+static char kept[EDL_MAX];	/* what it had before: back after */
+
+/* Alt+N, [New Folder]: the field asks for its name */
+static void
+newdir_begin(void)
+{
+	if(making)
+		return;
+	st.pname.s[st.pname.len] = 0;
+	strcpy(kept, st.pname.s);
+	edl_set(&st.pname, "");
+	making = 1;
+	nsugg = 0;
+	ui_steal(ID_P_NAME);
+}
+
+/* Esc: as it was */
+static void
+newdir_cancel(void)
+{
+	making = 0;
+	edl_set(&st.pname, kept);
+	ui_steal(ID_P_NAME);
+}
+
+/* Enter: the folder made in the one shown, and gone into (Save As keeps
+ * the file's name) */
+static void
+newdir_make(void)
+{
+	char path[PATH_MAX_ + 2], msg[160];
+	const char *name, *why;
+
+	st.pname.s[st.pname.len] = 0;
+	name = st.pname.s;
+	if(*name == 0) {
+		newdir_cancel();
+		return;
+	}
+	if(strchr(name, path_sep) || strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
+		error("Not a name for a folder: ", name);
+		return;
+	}
+	path_join(path, st.pdir, name);
+	path_normalize(path);
+	if((why = dir_make(path)) != 0) {
+		strcpy(msg, "Cannot make the folder (");
+		strncat(msg, why, 100);
+		strcat(msg, "): ");
+		error(msg, path);
+		return;
+	}
+	making = 0;
+	folder_go(path);
+	if(st.picker == PICK_SAVEAS)
+		edl_set(&st.pname, kept);
+	ui_steal(ID_P_NAME);
+}
+
+/* path: within dir, or dir itself */
+static int
+within(const char *path, const char *dir)
+{
+	size_t n = strlen(dir);
+
+	while(n > 1 && dir[n - 1] == path_sep)
+		n--;
+	return strncmp(path, dir, n) == 0 && (path[n] == 0 || path[n] == path_sep);
+}
+
+/* a folder that is not to go to the Trash: said, and 1 */
+static int
+trash_refused(const char *path)
+{
+	char cwd[PATH_MAX_];
+	const char *home = getenv("HOME");
+	struct doc *d;
+
+	plat_cwd(cwd, sizeof cwd);
+	if(within(cwd, path)) {
+		error("The project's folder is in it: ", path);
+		return 1;
+	}
+	if(home && within(home, path)) {
+		error("The home folder is in it: ", path);
+		return 1;
+	}
+	for(d = docs; d; d = d->next)
+		if(d->path && within(d->path, path)) {
+			error("A file open in the editor is in it: ", d->path);
+			return 1;
+		}
+	return 0;
+}
+
+/* Del, [Trash]: the folder name (of the one shown) to the Trash, once
+ * Yes is said */
+static void
+trash_ask(const char *name)
+{
+	char path[PATH_MAX_ + 2];
+	size_t n = name ? strlen(name) : 0;
+
+	if(n < 2 || name[n - 1] != path_sep || strcmp(name, "..") == 0) {
+		error("Choose a folder in the list to move to the Trash", 0);
+		return;
+	}
+	path_join(path, st.pdir, name);
+	path_normalize(path);
+	n = strlen(path);
+	while(n > 1 && path[n - 1] == path_sep)
+		path[--n] = 0;
+	if(trash_refused(path))
+		return;
+	mem_free(st.trash);
+	st.trash = mem_strdup(path);
+}
+
+void
+picker_trash(const char *path)
+{
+	char msg[160];
+	const char *why;
+
+	if(trash_refused(path))	/* again: things may have changed since */
+		return;
+	if((why = plat_trash(path)) != 0) {
+		strcpy(msg, "Cannot move to the Trash (");
+		strncat(msg, why, 100);
+		strcat(msg, "): ");
+		error(msg, path);
+		return;
+	}
+	loaded = 0;	/* listed again, without it */
+}
+
+/* the two buttons, left of right (the last cell they may take), on row y:
+ * where they start, or right + 1 when they do not fit after from */
+static int
+manage_buttons(int from, int right, int y, int at)
+{
+	int wn = text_width("New Folder") + 2, wt = text_width("Trash (Del)") + 2;
+	int x = right + 1 - wt - 2 - wn;
+
+	if(x < from)
+		return right + 1;
+	if(ui_button(ID_P_NEWDIR, x, y, "New Folder", 'N', at))
+		newdir_begin();
+	if(ui_button(ID_P_TRASH, x + wn + 2, y, "Trash (Del)", 0, at))
+		trash_ask(st.picker == PICK_SAVEAS ? (nents ? ent(sel) : 0) :
+		    fsel < nfrow && frow[fsel] != HERE ? ent(frow[fsel]) : 0);
+	return x;
+}
+
 static void
 draw_browse(int w, int h)
 {
 	static const char *const hint =
 	    "Enter: go in   ./: open here   Alt+Enter: open";
 	static const char *const fhint = "Enter: open   Backspace: up";
+	static const char *const mhint = "Enter: make the folder and go into it   Esc: cancel";
 	static char shown;	/* opened: the search has the focus first */
 	int folders = st.picker == PICK_FOLDER;
-	int x, y, lw = 11, lh = h - 6, i, r, cur, act = 0, row = 0, at, inlist, lf;
+	int x, y, lw = 12, lh = h - 6, i, r, cur, act = 0, row = 0, at, inlist, lf, bx, over;
 	kcode k;
 
 	if(!loaded) {
 		refresh();
 		folder_rows();
 	}
+	over = st.trash || st.nerr;	/* Yes or No asked over it, or an error */
+	ui_nograb = over;
 	ui_modal_begin(folders ? "Open Project Folder" DOTS : "Open File" DOTS, w, h, S_FLOAT,
 	    &x, &y);
 	if(!shown)
 		ui_steal(ID_P_NAME);
 	shown = 1;
 	/* the list has the focus and a character is typed: to the search */
-	k = ui_key;
+	k = over ? 0 : ui_key;
 	if(ui_focus == ID_P_LIST && k >= ' ' && k < 0x110000 && k != 127)
 		ui_steal(ID_P_NAME);
 	inlist = ui_focus == ID_P_NAME || ui_focus == ID_P_LIST;
 	/* the keys of the list (from the search too), and Enter */
-	if(k == (K_CTRL | 'H') || k == (K_ALT | 'H')) {
+	if(making && (k == 27 || (k == 13 && ui_focus == ID_P_NAME))) {
+		if(k == 27)
+			newdir_cancel();
+		else
+			newdir_make();
+		folder_rows();
+		ui_key = 0;
+	} else if(k == (K_ALT | 'N') || k == (K_ALT | 'n')) {
+		newdir_begin();
+		ui_key = 0;
+	} else if(!making && k == K_DEL &&
+	    (ui_focus == ID_P_LIST || (ui_focus == ID_P_NAME && st.pname.len == 0))) {
+		trash_ask(fsel < nfrow && frow[fsel] != HERE ? ent(frow[fsel]) : 0);
+		ui_key = 0;
+	} else if(k == (K_CTRL | 'H') || k == (K_ALT | 'H')) {
 		st.phidden = !st.phidden;
 		hidden_changed();
 		ui_key = 0;
@@ -411,14 +590,15 @@ draw_browse(int w, int h)
 		act = k == (K_ALT | 13) || (fsel < nfrow && frow[fsel] == HERE) ? 2 : 1;
 		row = fsel;
 		ui_key = 0;
-	} else if(inlist && (k == (K_ALT | K_UP) || (k == 8 && st.pname.len == 0))) {
+	} else if(!making && inlist && (k == (K_ALT | K_UP) || (k == 8 && st.pname.len == 0))) {
 		folder_into("..");
 		ui_key = 0;
 	}
 	scr_text(x + 2, y + 1, "Folder:", S_FLOAT, x + 2 + lw);
 	ui_trunc(x + 2 + lw, y + 1, st.pdir, S_FLOAT, x + w - 2);
-	scr_text(x + 2, y + 2, "Search:", S_FLOAT, x + 2 + lw);
-	if(ui_edit(ID_P_NAME, x + 2 + lw, y + 2, w - 4 - lw, &st.pname, S_FLOAT) && loaded) {
+	scr_text(x + 2, y + 2, making ? "New folder:" : "Search:", S_FLOAT, x + 2 + lw);
+	if(ui_edit(ID_P_NAME, x + 2 + lw, y + 2, w - 4 - lw, &st.pname, S_FLOAT) && loaded &&
+	   !making) {
 		if(st.pname.len > 0 && st.pname.s[st.pname.len - 1] == path_sep)
 			folder_typed_sep();
 		else
@@ -471,15 +651,21 @@ draw_browse(int w, int h)
 	if(nfrow == 0)
 		scr_text(x + 3, y + 3, folders ? "No folder matches" :
 		    "Nothing matches: Enter opens a new file of that name", S_LIST | F_DIM, x + w - 2);
-	scr_text(x + 2, y + h - 3, folders ? hint : fhint, S_FLOAT | F_DIM, x + w - 2);
+	scr_text(x + 2, y + h - 3, making ? mhint : folders ? hint : fhint, S_FLOAT | F_DIM,
+	    x + w - 2);
 	if(ui_check(ID_P_HIDDEN, x + 2, y + h - 2, "Hidden (Alt+H)", &st.phidden, S_FLOAT))
 		hidden_changed();
-	scr_lower(x + 2, x + 6 + text_width("Hidden (Alt+H)"), y + h - 2);
-	if(folders && ui_button(ID_P_FOLDER, x + w - 4 - text_width("Open This Folder"), y + h - 2,
-	    "Open This Folder", 0, S_FLOAT)) {
-		act = 2;	/* the folder shown */
-		row = -2;
+	bx = x + w - 2;	/* the buttons, from the right */
+	if(folders) {
+		bx = x + w - 4 - text_width("Open This Folder");
+		if(ui_button(ID_P_FOLDER, bx, y + h - 2, "Open This Folder", 0, S_FLOAT)) {
+			act = 2;	/* the folder shown */
+			row = -2;
+		}
+		bx -= 2;
 	}
+	manage_buttons(x + 2 + text_width("Hidden (Alt+H)") + 7, bx - 1, y + h - 2, S_FLOAT);
+	scr_lower(x + 2, x + 6 + text_width("Hidden (Alt+H)"), y + h - 2);
 	if(ui_modal_end()) {
 		shown = 0;
 		close_picker();
@@ -516,8 +702,9 @@ draw_picker(void)
 {
 	char path[PATH_MAX_ + 2];
 	int w = scr_cols >= 60 ? scr_cols - 20 : scr_cols - 2, h = scr_rows - 10;
-	int x, y, act = 0, lw = 11, r, done = 0;
+	int x, y, act = 0, lw = 12, r, done = 0, over;
 	int tw;
+	kcode k;
 
 	if(w < 10)
 		w = scr_cols;
@@ -532,25 +719,39 @@ draw_picker(void)
 	}
 	if(!loaded)
 		refresh();
-	ui_nograb = st.overwrite != 0;
+	over = st.overwrite || st.trash || st.nerr;	/* asked over it, or an error */
+	ui_nograb = over;
 	ui_modal_begin(st.picker == PICK_OPEN ? "Open File" DOTS : "Save As" DOTS,
 	    w, h, S_FLOAT, &x, &y);
+	k = over ? 0 : ui_key;
 	/* the hidden files (.name): Ctrl+H (Alt+H; on the list of a terminal,
 	   where Ctrl+H is Backspace's, that too), or the box */
-	if(ui_key == (K_CTRL | 'H') || ui_key == (K_ALT | 'H') ||
-	   (ui_key == (K_CTRL | 8) && ui_focus == ID_P_LIST)) {
+	if(k == (K_CTRL | 'H') || k == (K_ALT | 'H') ||
+	   (k == (K_CTRL | 8) && ui_focus == ID_P_LIST)) {
 		ui_key = 0;
 		st.phidden = !st.phidden;
 		hidden_changed();
+	} else if(making && (k == 27 || (k == 13 && ui_focus == ID_P_NAME))) {
+		if(k == 27)
+			newdir_cancel();
+		else
+			newdir_make();
+		ui_key = 0;
+	} else if(k == (K_ALT | 'N') || k == (K_ALT | 'n')) {
+		newdir_begin();
+		ui_key = 0;
+	} else if(!making && k == K_DEL && ui_focus == ID_P_LIST) {
+		trash_ask(nents ? ent(sel) : 0);
+		ui_key = 0;
 	}
 	scr_text(x + 2, y + 1, "Folder:", S_FLOAT, x + 2 + lw);
 	ui_trunc(x + 2 + lw, y + 1, st.pdir, S_FLOAT, x + w - 2);
-	scr_text(x + 2, y + 2, "File name:", S_FLOAT, x + 2 + lw);
+	scr_text(x + 2, y + 2, making ? "New folder:" : "File name:", S_FLOAT, x + 2 + lw);
 	if(nsugg && ui_focus == ID_P_NAME && ui_key == K_DOWN) {
 		ui_key = 0;
 		ui_steal(ID_P_SUGGEST);
 	}
-	if(ui_edit(ID_P_NAME, x + 2 + lw, y + 2, tw, &st.pname, S_FLOAT))
+	if(ui_edit(ID_P_NAME, x + 2 + lw, y + 2, tw, &st.pname, S_FLOAT) && !making)
 		suggest();
 	if(ui_focus == ID_P_NAME && ui_key == 13) {
 		ui_key = 0;
@@ -562,10 +763,12 @@ draw_picker(void)
 	   the middle between the list and the bottom line of the frame */
 	if(ui_check(ID_P_HIDDEN, x + 2, y + h - 2, "Hidden Files (Ctrl+H)", &st.phidden, S_FLOAT))
 		hidden_changed();
+	manage_buttons(x + 2 + text_width("Hidden Files (Ctrl+H)") + 7, x + w - 3, y + h - 2,
+	    S_FLOAT);
 	scr_lower(x + 2, x + 6 + text_width("Hidden Files (Ctrl+H)"), y + h - 2);
-	if(r == 2)
+	if(r == 2 && !making)
 		act = 1;
-	if(r && nents) {
+	if(r && nents && !making) {
 		edl_set(&st.pname, ent(sel));	/* the one selected */
 		nsugg = 0;
 	}

@@ -536,8 +536,10 @@ ui_modal_end(void)
 	int in = ui_well_end(), esc = in && ui_key == 27;
 
 	inside = 0;
-	if(in || ui_key == K_MOUSE)
-		ui_key = 0;	/* none for what is behind */
+	/* none for what is behind; the mouse is the topmost modal's (one drawn
+	   after this one, over it, has it: a question, an error) */
+	if(in || (ui_key == K_MOUSE && depth >= nmodal))
+		ui_key = 0;
 	if(esc)
 		ui_again = 1;
 	return esc;

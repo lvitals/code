@@ -663,6 +663,8 @@ draw(kcode key)
 		draw_picker();
 	if(st.overwrite)
 		draw_overwrite();
+	if(st.trash)
+		draw_trash();
 	if(st.wants_save)
 		draw_save();
 	if(st.wants_gotofile)

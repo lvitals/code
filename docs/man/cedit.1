@@ -336,6 +336,18 @@ shows or hides the hidden files.
 .Pp
 Save As has a File name field instead, with the names that start with
 the one typed, and asks before it writes over a file.
+.Pp
+In the three dialogs (Open File, Save As, Open Project Folder)
+.Ic Alt+N
+or the New Folder button asks for a name and makes that folder in the
+one shown, going into it
+.Pq Ic Esc No cancels ;
+.Ic Del
+on the list, or the Trash button, moves the folder chosen to the Trash
+of the desktop (the freedesktop.org Trash, which the file managers show
+and restore from), once it is confirmed.
+The project folder, the home folder and a folder with a file open in
+the editor are not moved.
 A save writes a new file and renames it over the old one, keeping its
 mode.
 .Sh THE PROJECT
@@ -536,6 +548,13 @@ writes each event it gets to.
 .Bl -tag -width Ds -compact
 .It Pa ~/.config/cedit/settings.json
 the settings
+.It Pa ~/.local/share/Trash
+the Trash folders are moved to
+.Po or
+.Ev XDG_DATA_HOME Ns Pa /Trash ;
+.Pa .Trash-UID
+at the top of another disk
+.Pc
 .It Pa share/applications/xcedit.desktop
 the menu entry of
 .Nm xcedit

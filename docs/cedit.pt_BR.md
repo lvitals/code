@@ -48,8 +48,13 @@ Requisitos:
 
 - `cedit`: um compilador C99 e um sistema POSIX (termios, dirent, poll,
   threads POSIX).
-- `xcedit`: também GLFW 3, OpenGL e os cabeçalhos stb
-  (`/usr/include/stb`).
+- `xcedit`: também GLFW 3 e OpenGL.  O stb_truetype, que desenha os
+  caracteres, faz parte das fontes.
+
+Os sistemas: Linux, macOS, FreeBSD, OpenBSD e NetBSD, das mesmas
+fontes (POSIX e C99).  O Makefile serve para qualquer make POSIX, então
+o `make` de cada sistema o compila; no macOS o OpenGL é o framework do
+sistema.
 
 ```
 make                 # build/cedit e build/xcedit
@@ -355,6 +360,34 @@ precisa ser digitado.  Abaixo dele aparecem os nomes da pasta que
 começam com o que foi digitado.  Gravar por cima de um arquivo existente
 pede confirmação.
 
+### New Folder e Move to Trash
+
+O Open File, o Save As e o Open Project Folder gerenciam as pastas do
+mesmo jeito, com dois botões embaixo:
+
+- **New Folder** (Alt+N): o campo pede o nome da pasta ("New folder:").
+  Enter cria a pasta dentro da pasta mostrada e entra nela; Esc volta ao
+  que estava no campo.  No Save As o nome de arquivo digitado antes é
+  mantido, para salvar na pasta nova em seguida.
+- **Trash (Del)**: move a pasta escolhida na lista para a Lixeira,
+  depois de uma confirmação (Yes, No).  O Del funciona na lista, ou no
+  campo quando nada foi digitado (senão o Del edita o texto).
+
+A Lixeira é a do próprio desktop (a especificação Trash do
+freedesktop.org): `~/.local/share/Trash` (ou `$XDG_DATA_HOME/Trash`)
+para pastas no mesmo disco da pasta pessoal; senão `.Trash-UID` no topo
+do outro disco.  As pastas movidas aparecem na Lixeira do Arquivos do
+GNOME, do Dolphin, do Thunar, do Caja e do Nemo, e podem ser
+restauradas de lá.  A pasta é movida, nunca copiada nem apagada.  O
+próprio editor faz isso (POSIX: `rename`, `mkdir`, o `.trashinfo`
+gravado), sem biblioteca de desktop nenhuma; num sistema sem desktop as
+pastas ficam guardadas nessa pasta do mesmo jeito.  No macOS a Lixeira
+é a do Finder: `~/.Trash` (`.Trashes/UID` em outro disco).
+
+Não são movidas, com o motivo informado: a pasta do projeto (ou uma
+pasta que a contém), a pasta pessoal e uma pasta com um arquivo aberto
+no editor.
+
 ### Como os arquivos são salvos
 
 Salvar grava um arquivo novo ao lado do antigo e o renomeia por cima
@@ -523,7 +556,8 @@ linha `#!` e pelas primeiras linhas.  A barra de status a mostra.
 Cada linguagem é um pequeno arquivo C em `src/app/langs/` que lista
 extensões, palavras-chave, tipos, comentários, strings e blocos.  Para
 acrescentar uma, copie `docs/lang_template.c`, acrescente uma linha em
-`src/app/langs/all.h` e confira o resultado com `cedit --lex ARQUIVO`.
+`src/app/langs/all.h` e o objeto dela em `LANGS` no Makefile (o `make
+check-langs` avisa de um esquecido) e confira o resultado com `cedit --lex ARQUIVO`.
 O guia completo é o [LANGUAGES.md](LANGUAGES.md).
 
 Não há servidor de linguagem (LSP).
@@ -646,6 +680,8 @@ escape").
 | Ctrl+Shift+S | Save As |
 | Ctrl+W | Close File |
 | Ctrl+Q | Exit |
+| Alt+N (no Open, Save As, Open Project Folder) | New Folder (pasta nova) |
+| Del (nos mesmos, na lista) | Move a pasta para a Lixeira |
 
 ### Edição
 
@@ -709,6 +745,7 @@ escape").
 | `XCEDIT_SNAPSHOT=arquivo.ppm` | Testes: o xcedit grava cada quadro como imagem |
 | `XCEDIT_TRACE=arquivo` | Testes: o xcedit grava cada evento que recebe |
 | `.gitignore`, `.ignore`, `.git/info/exclude` | Arquivos deixados de fora das buscas do projeto |
+| `$XDG_DATA_HOME/Trash` (`~/.local/share/Trash`), `.Trash-UID` | A Lixeira para onde as pastas são movidas |
 
 ### Código de saída
 

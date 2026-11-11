@@ -7,6 +7,7 @@
 char *pk_names;		/* the entries, one after another */
 unsigned *pk_ents;	/* where each starts */
 int pk_n, pk_loaded, pk_sel, pk_top;
+char pk_making;
 
 void
 picker_open(int kind)
@@ -26,6 +27,9 @@ close_picker(void)
 	st.picker = PICK_NONE;
 	mem_free(st.overwrite);
 	st.overwrite = 0;
+	mem_free(st.trash);
+	st.trash = 0;
+	pk_making = 0;
 	pk_loaded = 0;
 	mem_free(pk_names);
 	mem_free(pk_ents);

@@ -283,6 +283,30 @@ draw_gotofile(void)
 }
 
 
+/* before a folder of the file picker goes to the Trash (Del, [Trash]) */
+void
+draw_trash(void)
+{
+	static char line[PATH_MAX_ + 64];
+	const char *msg[2];
+	int r;
+
+	strcpy(line, "Move the folder \"");
+	strcat(line, path_last(st.trash));
+	strcat(line, "\" to the Trash?");
+	msg[0] = line;
+	msg[1] = "It can be restored from the Trash of the system.";
+	r = msgbox("Move to Trash", msg, 2, MB_YESNO, S_ALERT);
+	if(r < 0)
+		return;
+	if(r == 0)
+		picker_trash(st.trash);
+	mem_free(st.trash);
+	st.trash = 0;
+	ui_steal(ID_P_LIST);
+	ui_again = 1;
+}
+
 /* the warning before Save As writes over a file */
 void
 draw_overwrite(void)

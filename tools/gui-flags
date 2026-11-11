@@ -1,0 +1,26 @@
+#!/bin/sh
+# The flags of xcedit's libraries, for the Makefile (POSIX sh):
+#   sh tools/gui-flags --cflags     to compile src/platform/glfw/gui.c
+#   sh tools/gui-flags --libs       to link xcedit
+# GLFW 3 by pkg-config; OpenGL by pkg-config too, but on macOS, where it is
+# a framework.  stb_truetype is in the sources (src/platform/glfw).
+case "$1" in
+--cflags)
+	if [ "$(uname)" = Darwin ]; then
+		echo "$(pkg-config --cflags glfw3) -DGL_SILENCE_DEPRECATION"
+	else
+		pkg-config --cflags glfw3 gl
+	fi
+	;;
+--libs)
+	if [ "$(uname)" = Darwin ]; then
+		echo "$(pkg-config --libs glfw3) -framework OpenGL -lm"
+	else
+		echo "$(pkg-config --libs glfw3 gl) -lm"
+	fi
+	;;
+*)
+	echo "usage: $0 --cflags | --libs" >&2
+	exit 2
+	;;
+esac
