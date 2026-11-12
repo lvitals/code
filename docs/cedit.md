@@ -434,13 +434,14 @@ shown, becomes the project's, as Open Project Folder does), **New File**, **New 
 **Move To**, **Rename**, **Move to Trash**, **Delete Permanently**, **Collapse All** and
 **Properties**; New File, New Folder, Trash and Collapse All are also buttons at the bottom.  What
 needs a name asks for it in the Search line ("New file:", "New
-folder:", "New name:", "Copy to:", "Move to:"): Enter does it, Esc does not.  Copy To
+folder:", "New name:", "Copy to:", "Move to:", "Paste as:"): Enter does it, Esc does not.  Copy To
 and Move To start with the folder the entry is in; a folder typed there
 takes the entry inside it, another name is the new name (`~/` is the
 home; a relative path is from the folder shown).
 
-A copy pasted where its name is taken is named `name (copy).ext`,
-`name (copy 2).ext`, ...  A cut entry is greyed until it is pasted (it
+A copy pasted where its name is taken asks its name, as New File does
+("Paste as:"), at first the first free of `name (copy).ext`,
+`name (copy 2).ext`, ...: Enter pastes it, Esc does not.  A cut entry is greyed until it is pasted (it
 is moved, not copied).  A folder is copied with all that is in it, a
 symbolic link as a link; a move to another disk is a copy and then a
 removal.  A document open in the editor follows its file when it (or
@@ -833,7 +834,7 @@ enabled ("meta sends escape").
 | `settings.json.invalid` | A copy of a settings file that was not valid JSON |
 | `$HOME` | `~` in paths and the Open dialogs |
 | `$XDG_DATA_HOME`, `$XDG_DATA_DIRS` | Where xcedit looks for font families |
-| `XCEDIT_KEYS` | Testing: keys xcedit types at start (`~X` Alt+X, `^X` Ctrl+X, `\|` Enter, `!` Esc, `{x,y}` a click at a cell, `{x,y>x2,y2}` a drag) |
+| `XCEDIT_KEYS` | Testing: keys xcedit types at start (`~X` Alt+X, `^X` Ctrl+X (`^V` as the key: the clipboard of another program too), `\|` Enter, `!` Esc, `{x,y}` a click at a cell, `{x,y>x2,y2}` a drag) |
 | `XCEDIT_SNAPSHOT=file.ppm` | Testing: xcedit writes each frame as an image |
 | `XCEDIT_TRACE=file` | Testing: xcedit writes each event it receives |
 | `.gitignore`, `.ignore`, `.git/info/exclude` | Files left out of the project searches |

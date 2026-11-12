@@ -437,14 +437,15 @@ pasta mostrada, passa a ser a do projeto, como no Open Project Folder),
 to Trash**, **Delete Permanently** (apagar de vez), **Collapse All** (recolher tudo) e **Properties**; New File,
 New Folder, Trash e Collapse All também são botões embaixo.  O que precisa
 de um nome o pede na linha Search ("New file:", "New folder:", "New
-name:", "Copy to:", "Move to:"): Enter
+name:", "Copy to:", "Move to:", "Paste as:"): Enter
 faz, Esc cancela.  Copy To e Move To começam com a pasta onde a entrada
 está; uma pasta digitada ali recebe a entrada dentro dela, outro nome é
 o novo nome (`~/` é a pasta pessoal; um caminho relativo parte da pasta
 mostrada).
 
-Uma cópia colada onde o nome já existe recebe `nome (copy).ext`,
-`nome (copy 2).ext`, ...  Uma entrada recortada fica acinzentada até ser
+Uma cópia colada onde o nome já existe pede o nome, como o New File
+("Paste as:"), de início o primeiro livre de `nome (copy).ext`,
+`nome (copy 2).ext`, ...: Enter cola, Esc cancela.  Uma entrada recortada fica acinzentada até ser
 colada (ela é movida, não copiada).  Uma pasta é copiada com tudo o que
 há nela, um link simbólico como link; mover para outro disco é copiar e
 depois remover.  Um documento aberto no editor acompanha o arquivo
@@ -842,7 +843,7 @@ escape").
 | `settings.json.invalid` | Cópia de um arquivo de configurações que não era JSON válido |
 | `$HOME` | O `~` nos caminhos e nos diálogos de abrir |
 | `$XDG_DATA_HOME`, `$XDG_DATA_DIRS` | Onde o xcedit procura as famílias de fontes |
-| `XCEDIT_KEYS` | Testes: teclas que o xcedit digita ao iniciar (`~X` Alt+X, `^X` Ctrl+X, `\|` Enter, `!` Esc, `{x,y}` um clique numa célula, `{x,y>x2,y2}` um arrasto) |
+| `XCEDIT_KEYS` | Testes: teclas que o xcedit digita ao iniciar (`~X` Alt+X, `^X` Ctrl+X (`^V` como a tecla: a área de transferência de outro programa também), `\|` Enter, `!` Esc, `{x,y}` um clique numa célula, `{x,y>x2,y2}` um arrasto) |
 | `XCEDIT_SNAPSHOT=arquivo.ppm` | Testes: o xcedit grava cada quadro como imagem |
 | `XCEDIT_TRACE=arquivo` | Testes: o xcedit grava cada evento que recebe |
 | `.gitignore`, `.ignore`, `.git/info/exclude` | Arquivos deixados de fora das buscas do projeto |

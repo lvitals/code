@@ -19,7 +19,8 @@
  *   Shift+Del  Delete Permanently (asked first; not to the Trash); Shift
  *           held, [Trash (Del)] is [Delete Permanently]
  *   Ctrl+X  Cut   Ctrl+C  Copy   Ctrl+V  Paste (into the folder chosen, or
- *           the one the file chosen is in)
+ *           the one the file chosen is in; a copy where its name is taken:
+ *           the name asked, as New File, "name (copy).ext" at first)
  *   Alt+Enter  Properties    F5  Read again    Alt+H  Hidden
  *   Alt+C   Collapse All: every folder of the tree closed
  *   Shift+F10  the menu of the one chosen (the right button: of the one
@@ -71,11 +72,12 @@ static char stale;		/* the rows made again */
 static char keep[PATH_MAX_];	/* to be chosen once they are */
 static struct edl query;
 
-enum { ASK_NONE, ASK_NEWDIR, ASK_RENAME, ASK_COPYTO, ASK_MOVETO, ASK_NEWFILE };
+enum { ASK_NONE, ASK_NEWDIR, ASK_RENAME, ASK_COPYTO, ASK_MOVETO, ASK_NEWFILE, ASK_PASTE };
 static int ask;			/* the field asks for a name */
 static struct edl answer;
 static char ask_path[PATH_MAX_];	/* of what: the folder of a new one, or
 					   what is renamed, copied, moved */
+static char ask_dir[PATH_MAX_];	/* a copy pasted: the folder it goes to */
 
 static char *xdel;		/* Shift+Del: what is asked to be deleted for good */
 static char *xclip;		/* Cut or Copy: the path; Paste takes it */
@@ -1017,8 +1019,18 @@ do_paste(int r)
 	path_normalize(to);
 	if(xcut && strcmp(to, xclip) == 0)
 		return;		/* where it is */
-	if(!xcut && file_kind(to) != 0 && !free_copy_name(to, to)) {
-		error("No name is free for a copy of ", xclip);
+	if(!xcut && file_kind(to) != 0) {	/* the name taken: asked, as New
+						   File does, the free one at first */
+		if(!free_copy_name(to, to)) {
+			error("No name is free for a copy of ", xclip);
+			return;
+		}
+		strcpy(ask_path, xclip);
+		strcpy(ask_dir, dir);
+		edl_set(&answer, path_last(to));
+		ask = ASK_PASTE;
+		cm = 0;
+		ui_steal(ID_P_NAME);
 		return;
 	}
 	if(transfer(xclip, to, xcut) && xcut) {
@@ -1208,6 +1220,22 @@ ask_done(void)
 			return 0;
 		changed_to(path);
 		return 1;
+	case ASK_PASTE:
+		if(*name == 0)
+			return 1;
+		if(bad_name(name))
+			return 0;
+		if(file_kind(ask_path) == 0) {
+			error("It is no longer there: ", ask_path);
+			return 1;
+		}
+		path_join(path, ask_dir, name);
+		path_normalize(path);
+		if(strcmp(path, ask_path) != 0 && file_kind(path) != 0) {
+			error("There is one of that name already: ", path);
+			return 0;
+		}
+		return transfer(ask_path, path, 0);
 	case ASK_RENAME:
 		if(*name == 0 || strcmp(name, path_last(ask_path)) == 0)
 			return 1;
@@ -1794,11 +1822,12 @@ draw_explorer(void)
 	static const char *const shint =
 	    "Enter: open (a folder: go in)   Right: show in the tree   Esc: clear the search";
 	static const char *const ask_label[] = { "Search:", "New folder:", "New name:",
-		"Copy to:", "Move to:", "New file:" };
+		"Copy to:", "Move to:", "New file:", "Paste as:" };
 	static const char *const ask_hint[] = { "", "Enter: make the folder   Esc: cancel",
 		"Enter: rename   Esc: cancel", "Enter: copy (a folder: into it)   Esc: cancel",
 		"Enter: move (a folder: into it)   Esc: cancel",
-		"Enter: make the file (empty)   Esc: cancel" };
+		"Enter: make the file (empty)   Esc: cancel",
+		"Enter: paste the copy   Esc: cancel" };
 	int mx = scr_cols >= 60 ? scr_cols / 20 : 0, my = scr_rows >= 20 ? scr_rows / 20 : 0;
 	int w = scr_cols - 2 * mx, h = scr_rows - 2 * my;
 	int x, y, lw = 12, lh, tx2, px1 = 0, i, r, at, lf, inlist, nav, act = -1, hw, cx, bx;
@@ -1915,11 +1944,15 @@ draw_explorer(void)
 		do_trash(sel);
 	else if(empty && !ask && k == (K_SHIFT | K_DEL))
 		do_delete(sel);
-	else if(empty && !ask && k == (K_CTRL | 'C'))
+	/* the files', the search typed or not.  A paste of text (xcedit's
+	   Ctrl+V when the system's clipboard has another program's text, a
+	   terminal's own paste) is Paste too while a file is cut or copied;
+	   none is: text into the search */
+	else if(inlist && !ask && k == (K_CTRL | 'C'))
 		do_clip(sel, 0);
-	else if(empty && !ask && k == (K_CTRL | 'X'))
+	else if(inlist && !ask && k == (K_CTRL | 'X'))
 		do_clip(sel, 1);
-	else if(empty && !ask && k == (K_CTRL | 'V'))
+	else if(inlist && !ask && (k == (K_CTRL | 'V') || (k == K_PASTE && xclip)))
 		do_paste(sel);
 	else if(nav && (k == K_UP || k == (K_CTRL | 'P') || k == K_DOWN || k == (K_CTRL | 'N') ||
 	    k == K_PGUP || k == K_PGDN)) {

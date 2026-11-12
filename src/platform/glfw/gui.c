@@ -147,6 +147,16 @@ paste_clipboard(void)
 	return 1;
 }
 
+/* Ctrl or Alt (md) and a letter, a digit or a space (k): Ctrl+V is the
+ * clipboard's text when another program put it there */
+static void
+mod_key(kcode k, kcode md)
+{
+	if(k == 'V' && md == K_CTRL && paste_clipboard())
+		return;
+	push(k | md);
+}
+
 static int shift_down;	/* the Shift keys held: a bit each (their own
 			   presses and releases tell it, not the mouse) */
 
@@ -238,9 +248,7 @@ key_cb(GLFWwindow *w, int key, int scancode, int action, int m)
 	if(k >= 'a' && k <= 'z')
 		k -= 32;
 	skipchar = 1;
-	if(k == 'V' && md == K_CTRL && paste_clipboard())
-		return;
-	push(k | md);
+	mod_key(k, md);
 }
 
 /* a character, with the modifiers held: typed (none, or Shift), or with
@@ -1941,7 +1949,8 @@ test_keys(void)
 			continue;
 		}
 		if((*p == '~' || *p == '^') && p[1]) {
-			push((*p == '~' ? K_ALT : K_CTRL) | (p[1] >= 'a' && p[1] <= 'z' ? p[1] - 32 : p[1]));
+			/* as the keyboard gives it (^V: the clipboard too) */
+			mod_key(p[1] >= 'a' && p[1] <= 'z' ? p[1] - 32 : p[1], *p == '~' ? K_ALT : K_CTRL);
 			p++;
 		} else
 			push(*p == '|' ? 13 : *p == '!' ? 27 : (kcode)(unsigned char)*p);
