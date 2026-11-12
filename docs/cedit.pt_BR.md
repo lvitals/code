@@ -398,8 +398,7 @@ sob o mouse (ou, pelo teclado, do escolhido), colorida como no Open File
 in Project (Alt+P).  A prévia de uma pasta lista o que há nela.  A
 rodinha sobre a prévia a rola.  Ele sempre abre na pasta do projeto (a
 do Open Project Folder); dali a pasta mostrada pode ser trocada (`..`,
-Backspace, Open numa pasta, voltar e avançar) enquanto ele está aberto;
-a pasta do projeto aparece marcada com "(project)" ao lado da Folder.
+Backspace, Open numa pasta, voltar e avançar) enquanto ele está aberto.
 
 | Tecla, mouse | Ação |
 |---|---|
@@ -409,7 +408,8 @@ a pasta do projeto aparece marcada com "(project)" ao lado da Folder.
 | Clique numa pasta | Expande ou recolhe |
 | Backspace, Alt+Up | A pasta de cima |
 | Alt+Left / Alt+Right | Voltar / Avançar (as pastas mostradas antes) |
-| Alt+Home | A pasta do projeto |
+| Alt+O | Set as Project Folder: a pasta escolhida (num arquivo: a pasta mostrada) vira a pasta do projeto |
+| Alt+Home, [Project Folder] | Volta à pasta do projeto (o botão fica à direita da linha Folder) |
 | `nome/`, `~/`, `/` digitado | Entra nessa pasta (como no Open File) |
 | Ctrl+X / Ctrl+C / Ctrl+V | Recortar / Copiar / Colar (na pasta escolhida, ou na pasta do arquivo escolhido) |
 | F2 | Renomear |

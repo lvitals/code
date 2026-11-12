@@ -11,7 +11,8 @@
  *   Left    closed (again: to the folder it is in)
  *   Backspace, Alt+Up  the folder above (nothing typed)
  *   Alt+Left, Alt+Right  back, forward (the folders shown before)
- *   Alt+Home  the project's folder
+ *   Alt+Home, [Project Folder]  the project's folder
+ *   Alt+O   Set as Project Folder: the folder chosen (a file: the one shown)
  *   Alt+N   New Folder       F2  Rename        Del  Move to Trash
  *   Ctrl+X  Cut   Ctrl+C  Copy   Ctrl+V  Paste (into the folder chosen, or
  *           the one the file chosen is in)
@@ -1342,7 +1343,7 @@ static const struct {
 	char accel;
 } cm_items[C_COUNT] = {
 	{ "Open", "Enter", 'O' },
-	{ "Set as Project Folder", "", 'S' },
+	{ "Set as Project Folder", KEY_ALT "+O", 'S' },
 	{ "New Folder" DOTS, KEY_ALT "+N", 'N' },
 	{ "-", "", 0 },
 	{ "Cut", KEY_CTRL "+X", 'T' },
@@ -1744,6 +1745,9 @@ draw_explorer(void)
 		go_hist(0);
 	else if(!ask && k == (K_ALT | K_RIGHT))
 		go_hist(1);
+	else if(!ask && (k == (K_ALT | 'O') || k == (K_ALT | 'o')))
+		/* the folder chosen; a file, ..: the folder shown */
+		set_project(sel < nrows && rows[sel] && rows[sel]->dir ? sel : -1);
 	else if(!ask && k == (K_ALT | K_HOME))
 		go_project();
 	else if(!ask && k == (K_SHIFT | K_F10) && nrows) {
@@ -1796,10 +1800,15 @@ draw_explorer(void)
 		rebuild();
 
 	scr_text(x + 2, y + 1, "Folder:", S_FLOAT, x + 2 + lw);
-	i = is_project() ? text_width("  (project)") : 0;
-	r = ui_trunc(x + 2 + lw, y + 1, root->name, S_FLOAT, x + w - 2 - i);
-	if(i)
-		scr_text(r, y + 1, "  (project)", S_FLOAT | F_DIM, x + w - 2);
+	/* at its right, always: [Project Folder], back to the project's
+	   (Alt+Home) */
+	i = x + w - 3 - (text_width("Project Folder") + 2) + 1;
+	if(i < x + 2 + lw + 8)
+		i = x + w - 2;	/* no room: the path alone */
+	ui_trunc(x + 2 + lw, y + 1, root->name, S_FLOAT, i - 2);
+	if(i < x + w - 2 && ui_button(ID_X_PROJECT, i, y + 1, "Project Folder", 0, S_FLOAT) &&
+	   !ask && !is_project())
+		go_project();
 	scr_text(x + 2, y + 2, ask_label[ask], S_FLOAT, x + 2 + lw);
 	/* the search: what it found, at the right of the field */
 	count[0] = 0;

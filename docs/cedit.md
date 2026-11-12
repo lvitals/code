@@ -396,7 +396,7 @@ tree, and at its right a preview of the file under the mouse (or, with
 the keyboard, of the one chosen), highlighted as in Open File in Project
 (Alt+P).  A folder's preview lists what is in it.  The wheel over the
 preview scrolls it.  It always opens on the project folder (the one of
-Open Project Folder, marked "(project)" next to the Folder); from there
+Open Project Folder); from there
 you go into other folders, up, back and forward while it is open.
 
 | Key, mouse | Action |
@@ -407,7 +407,8 @@ you go into other folders, up, back and forward while it is open.
 | Click on a folder | Expand or collapse it |
 | Backspace, Alt+Up | The folder above |
 | Alt+Left / Alt+Right | Back / Forward (the folders shown before) |
-| Alt+Home | The project folder |
+| Alt+O | Set as Project Folder: the folder chosen (on a file: the folder shown) becomes the project folder |
+| Alt+Home, [Project Folder] | Back to the project folder (the button is at the right of the Folder line) |
 | `name/`, `~/`, `/` typed | Go into that folder (as in Open File) |
 | Ctrl+X / Ctrl+C / Ctrl+V | Cut / Copy / Paste (into the folder chosen, or the one the file chosen is in) |
 | F2 | Rename |
