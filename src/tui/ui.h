@@ -44,6 +44,7 @@ enum { W_BUTTON, W_EDIT, W_LIST };
 int ui_accel(int x, int y, const char *s, int accel, int at, int lim);
 /* [s], with an accelerator letter (or 0): 1 when pressed */
 int ui_button(int id, int x, int y, const char *s, int accel, int at);
+int ui_button_sole(int id, int x, int y, const char *s, int at);
 int ui_check(int id, int x, int y, const char *s, char *v, int at);
 int ui_edit(int id, int x, int y, int w, struct edl *e, int at);	/* 1: changed */
 void edl_set(struct edl *e, const char *s);

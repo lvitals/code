@@ -47,7 +47,7 @@ enum {
 #define F_UNDER		0x20	/* the accelerator of a menu */
 #define F_REV		0x40	/* reversed: a focused button */
 #define F_DIM		0x80	/* behind a modal; on a float, its text greyed */
-#define F_HOVER		0x100	/* the mouse over it: a button not focused */
+#define F_HOVER		0x100	/* the mouse over it: a button, focused or not */
 #define STYLE(a)	((a) & 0x1F)
 typedef unsigned short attr_t;	/* the looks of a cell: a style and flags */
 

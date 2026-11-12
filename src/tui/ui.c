@@ -234,12 +234,13 @@ pressed(int f, int x1, int y, int x2)
 	return 0;
 }
 
-int
-ui_button(int id, int x, int y, const char *s, int accel, int at)
+/* a button; rev: reversed when it has the focus */
+static int
+button(int id, int x, int y, const char *s, int accel, int at, int rev)
 {
 	int w = text_width(s) + 2 + (accel && !strchr(s, accel) && !strchr(s, accel | 0x20) ? 3 : 0);
 	int f = ui_focusable(id, W_BUTTON, x, y, x + w - 1), h = hover(id, x, y, x + w - 1);
-	int a = f ? at | F_REV : at | h;
+	int a = (f && rev ? at | F_REV : at) | h;	/* the hover, focused or not */
 
 	scr_put(x, y, '[', a);
 	scr_put(ui_accel(x + 1, y, s, accel, a, scr_cols), y, ']', a);
@@ -247,11 +248,25 @@ ui_button(int id, int x, int y, const char *s, int accel, int at)
 }
 
 int
+ui_button(int id, int x, int y, const char *s, int accel, int at)
+{
+	return button(id, x, y, s, accel, at, 1);
+}
+
+/* the only button of a modal ([Ok]): it has the focus (Enter presses it),
+   not drawn reversed */
+int
+ui_button_sole(int id, int x, int y, const char *s, int at)
+{
+	return button(id, x, y, s, 0, at, 0);
+}
+
+int
 ui_check(int id, int x, int y, const char *s, char *v, int at)
 {
 	int w = text_width(s) + 5;
 	int f = ui_focusable(id, W_BUTTON, x, y, x + w - 1), h = hover(id, x, y, x + w - 1);
-	int a = f ? at | F_REV : at | h;
+	int a = (f ? at | F_REV : at) | h;	/* the hover, focused or not */
 
 	/* [, the box, two blanks (a window draws the box wider, into the
 	   first), the label, ] */

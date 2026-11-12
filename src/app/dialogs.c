@@ -45,7 +45,10 @@ buttons(int x0, int y, int w, const char *const *text, const char *accel,
 		tw += text_width(text[i]) + 2 + (i ? 2 : 0);
 	x = x0 + (w - tw) / 2;
 	for(i = 0; i < n; i++) {
-		if(ui_button(ids[i], x, y, text[i], accel ? accel[i] : 0, at))
+		if(n == 1 && !(accel && accel[0])) {	/* [Ok] alone: not reversed */
+			if(ui_button_sole(ids[i], x, y, text[i], at))
+				r = i;
+		} else if(ui_button(ids[i], x, y, text[i], accel ? accel[i] : 0, at))
 			r = i;
 		x += text_width(text[i]) + 4;
 	}
