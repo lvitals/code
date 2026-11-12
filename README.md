@@ -118,7 +118,7 @@ icon.  The settings are in `~/.config/cedit/settings.json`, for both.
   search through all the subfolders, back and forward (Alt+Left,
   Alt+Right), and a menu on the right button: Open, Set as Project
   Folder, New File, New Folder, Cut, Copy, Paste, Copy To,
-  Move To, Rename (F2), Move to Trash (Del), Collapse All (Alt+C),
+  Move To, Rename (F2), Move to Trash (Del), Delete Permanently (Shift+Del), Collapse All (Alt+C),
   Properties (Alt+Enter).  It opens on the project folder.
 - Open File (as Open Project Folder): the folder, a Search line and the
   entries (.., the directories, the files).  Typing narrows them (a

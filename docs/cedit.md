@@ -417,6 +417,7 @@ you go into other folders, up, back and forward while it is open.
 | Ctrl+X / Ctrl+C / Ctrl+V | Cut / Copy / Paste (into the folder chosen, or the one the file chosen is in) |
 | F2 | Rename |
 | Del | Move to Trash (asked first) |
+| Shift+Del | Delete Permanently: not to the Trash, it cannot be undone (asked first; a folder with all that is in it).  While Shift is held, the [Trash (Del)] button is [Delete Permanently] (in xcedit at once; in a terminal when the mouse moves or clicks with Shift, if the terminal tells it) |
 | Alt+F | New File: an empty file, named at first as the editor names a new document (`Untitled-1.txt`, the first free) |
 | Alt+N | New Folder |
 | Alt+Enter | Properties |
@@ -430,7 +431,7 @@ you go into other folders, up, back and forward while it is open.
 The menu has **Open** (a file in the editor; a folder becomes the one
 shown), **Set as Project Folder** (the folder, or on no entry the folder
 shown, becomes the project's, as Open Project Folder does), **New File**, **New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**,
-**Move To**, **Rename**, **Move to Trash**, **Collapse All** and
+**Move To**, **Rename**, **Move to Trash**, **Delete Permanently**, **Collapse All** and
 **Properties**; New File, New Folder, Trash and Collapse All are also buttons at the bottom.  What
 needs a name asks for it in the Search line ("New file:", "New
 folder:", "New name:", "Copy to:", "Move to:"): Enter does it, Esc does not.  Copy To

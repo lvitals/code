@@ -16,6 +16,8 @@
  *   Alt+F   New File (empty; the name at first Untitled-N.txt, as the
  *           editor names a new document)
  *   Alt+N   New Folder       F2  Rename        Del  Move to Trash
+ *   Shift+Del  Delete Permanently (asked first; not to the Trash); Shift
+ *           held, [Trash (Del)] is [Delete Permanently]
  *   Ctrl+X  Cut   Ctrl+C  Copy   Ctrl+V  Paste (into the folder chosen, or
  *           the one the file chosen is in)
  *   Alt+Enter  Properties    F5  Read again    Alt+H  Hidden
@@ -34,9 +36,9 @@
  * shows it in the tree.  What is typed with a separator at its end is a
  * folder gone into, as in Open File: name/, ~/ the home, / the root.
  *
- * The menu: Open, Set as Project Folder, New File, New Folder, Cut, Copy, Paste,
- * Copy To..., Move To..., Rename..., Move to Trash, Collapse All,
- * Properties.  What asks for a name (a new folder, a new name, where to
+ * The menu: Open, Set as Project Folder, New File, New Folder, Cut, Copy,
+ * Paste, Copy To..., Move To..., Rename..., Move to Trash, Delete
+ * Permanently, Collapse All, Properties.  What asks for a name (a new folder, a new name, where to
  * copy or move to) asks it in the field of the search: Enter does it, Esc
  * does not. */
 #include <stdlib.h>
@@ -75,6 +77,7 @@ static struct edl answer;
 static char ask_path[PATH_MAX_];	/* of what: the folder of a new one, or
 					   what is renamed, copied, moved */
 
+static char *xdel;		/* Shift+Del: what is asked to be deleted for good */
 static char *xclip;		/* Cut or Copy: the path; Paste takes it */
 static char xcut;
 
@@ -787,6 +790,8 @@ explorer_open(void)
 void
 explorer_close(void)
 {
+	mem_free(xdel);
+	xdel = 0;
 	search_free();
 	node_free(root);
 	root = 0;
@@ -1085,6 +1090,53 @@ make_file(const char *path)
 		return 0;
 	}
 	return 1;
+}
+
+/* Shift+Del: row r deleted for good, once Yes is said (draw_delete) */
+static void
+do_delete(int r)
+{
+	char path[PATH_MAX_ + 2];
+
+	if(row_path(r, path) != 1) {
+		error("Choose a folder or a file in the tree to delete", 0);
+		return;
+	}
+	if(trash_refused(path))	/* the project, the home, what is open */
+		return;
+	mem_free(xdel);
+	xdel = mem_strdup(path);
+}
+
+/* the question before it: Yes deletes, No does not */
+static void
+draw_delete(void)
+{
+	static char line[PATH_MAX_ + 80];
+	const char *msg[2], *fail;
+	int dir = file_kind(xdel) == 2, r;
+
+	strcpy(line, dir ? "Delete the folder \"" : "Delete the file \"");
+	strcat(line, path_last(xdel));
+	strcat(line, dir ? "\" and all that is in it permanently?" : "\" permanently?");
+	msg[0] = line;
+	msg[1] = "It does not go to the Trash: it cannot be undone.";
+	r = msgbox("Delete Permanently", msg, 2, MB_YESNO, S_ALERT);
+	if(r < 0)
+		return;
+	if(r == 0 && !trash_refused(xdel)) {	/* again: things may have changed */
+		if((fail = plat_delete(xdel)) != 0)
+			why("Cannot delete", fail, xdel);
+		if(xclip && within(xclip, xdel)) {	/* gone: nothing to paste */
+			mem_free(xclip);
+			xclip = 0;
+		}
+		explorer_changed();
+	}
+	mem_free(xdel);
+	xdel = 0;
+	ui_steal(ID_P_LIST);
+	ui_again = 1;
 }
 
 /* the field asks for a name: what for (k), of row r */
@@ -1401,7 +1453,7 @@ is_project(void)
 /* --- the menu (the right button, Shift+F10) ------------------------------ */
 
 enum { C_OPEN, C_PROJECT, C_NEWFILE, C_NEWDIR, C_S1, C_CUT, C_COPY, C_PASTE, C_S2, C_COPYTO, C_MOVETO,
-	C_RENAME, C_TRASH, C_S3, C_COLLAPSE, C_PROPS, C_COUNT };
+	C_RENAME, C_TRASH, C_DELETE, C_S3, C_COLLAPSE, C_PROPS, C_COUNT };
 static const struct {
 	const char *text, *keys;
 	char accel;
@@ -1419,6 +1471,7 @@ static const struct {
 	{ "Move To" DOTS, "", 'M' },
 	{ "Rename" DOTS, "F2", 'R' },
 	{ "Move to Trash", "Del", 'H' },
+	{ "Delete Permanently", "Shift+Del", 'E' },
 	{ "-", "", 0 },
 	{ "Collapse All", KEY_ALT "+C", 'A' },
 	{ "Properties", KEY_ALT "+Enter", 'I' },
@@ -1507,6 +1560,7 @@ cm_do(int i)
 	case C_MOVETO: ask_begin(ASK_MOVETO, r); break;
 	case C_RENAME: ask_begin(ASK_RENAME, r); break;
 	case C_TRASH: do_trash(r); break;
+	case C_DELETE: do_delete(r); break;
 	case C_COLLAPSE: collapse_all(); break;
 	case C_PROPS: do_props(r); break;
 	}
@@ -1762,7 +1816,7 @@ draw_explorer(void)
 		h = scr_rows < 10 ? scr_rows : 10;
 	if(stale)
 		rebuild();
-	over = st.trash || st.nerr || props;	/* asked over it, or an error */
+	over = st.trash || st.nerr || props || xdel;	/* asked over it, or an error */
 	ui_nograb = over;
 	ui_modal_begin("Explorer", w, h, S_FLOAT, &x, &y);
 	lh = h - 6;
@@ -1859,6 +1913,8 @@ draw_explorer(void)
 		ask_begin(ASK_RENAME, sel);
 	else if(empty && !ask && k == K_DEL)
 		do_trash(sel);
+	else if(empty && !ask && k == (K_SHIFT | K_DEL))
+		do_delete(sel);
 	else if(empty && !ask && k == (K_CTRL | 'C'))
 		do_clip(sel, 0);
 	else if(empty && !ask && k == (K_CTRL | 'X'))
@@ -2041,18 +2097,28 @@ draw_explorer(void)
 			"Collapse All" };
 		static const int bid[] = { ID_X_NEWFILE, ID_P_NEWDIR, ID_P_TRASH, ID_X_COLLAPSE };
 		static const char bacc[] = { 'F', 'N', 0, 'C' };
-		int b, pressed = -1;
+		/* Shift held: [Trash (Del)] is [Delete Permanently] (Shift+Del) */
+		static const char *const perm = "Delete Permanently";
+		int b, pressed = -1, bw, shift = term_shift();
+		const char *label;
 
 		i = x + 2 + hw + 2;
-		for(b = 0; b < 4 && i + text_width(bt[b]) + 1 < bx - 2; b++) {
-			if(ui_button(bid[b], i, y + h - 2, bt[b], bacc[b], S_FLOAT))
+		for(b = 0; b < 4; b++) {
+			label = b == 2 && shift ? perm : bt[b];
+			bw = text_width(label);
+			if(i + bw + 1 >= bx - 2)
+				break;
+			if(ui_button(bid[b], i, y + h - 2, label, bacc[b], b == 2 && shift ?
+			    S_ALERT : S_FLOAT))
 				pressed = b;
-			i += text_width(bt[b]) + 4;
+			i += bw + 4;
 		}
 		if(pressed == 0)
 			ask_begin(ASK_NEWFILE, sel);
 		else if(pressed == 1)
 			ask_begin(ASK_NEWDIR, sel);
+		else if(pressed == 2 && (shift || (term_mouse.mods & K_SHIFT)))
+			do_delete(sel);
 		else if(pressed == 2)
 			do_trash(sel);
 		else if(pressed == 3 && !ask)
@@ -2069,6 +2135,8 @@ draw_explorer(void)
 	}
 	if(props)
 		draw_props();
+	if(xdel)
+		draw_delete();
 	if(act >= 0)
 		activate(act);
 	if(stale)

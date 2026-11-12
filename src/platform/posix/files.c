@@ -950,6 +950,18 @@ taken(const char *path)
 }
 
 const char *
+plat_delete(const char *path)
+{
+	struct stat s;
+
+	if(lstat(path, &s) < 0)
+		return strerror(errno);
+	if(!S_ISDIR(s.st_mode))
+		return unlink(path) == 0 ? 0 : strerror(errno);
+	return remove_tree(path) ? 0 : "Not all of it could be deleted";
+}
+
+const char *
 plat_copy(const char *from, const char *to)
 {
 	const char *why;

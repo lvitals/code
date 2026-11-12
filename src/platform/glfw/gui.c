@@ -147,13 +147,44 @@ paste_clipboard(void)
 	return 1;
 }
 
+static int shift_down;	/* the Shift keys held: a bit each (their own
+			   presses and releases tell it, not the mouse) */
+
+int
+term_shift(void)
+{
+	return shift_down != 0;
+}
+
+/* the window left: a Shift let go elsewhere is not seen, so none held */
+static void
+focus_cb(GLFWwindow *w, int focused)
+{
+	(void)w;
+	if(!focused && shift_down) {
+		shift_down = 0;
+		push(K_NONE);
+	}
+}
+
 static void
 key_cb(GLFWwindow *w, int key, int scancode, int action, int m)
 {
 	kcode k = 0, md = mods(m);
 	const char *name;
+	int was = shift_down;
 
 	(void)w;
+	/* Shift alone, pressed or let go: drawn again (a button may say
+	   another thing while it is held) */
+	if(key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT) {
+		int bit = key == GLFW_KEY_LEFT_SHIFT ? 1 : 2;
+
+		shift_down = action == GLFW_RELEASE ? shift_down & ~bit : shift_down | bit;
+		if(shift_down != was)
+			push(K_NONE);
+		return;
+	}
 	if(action == GLFW_RELEASE)
 		return;
 	skipchar = 0;
@@ -263,6 +294,8 @@ mouse_event(int kind, int button, int m)
 	term_mouse.kind = kind;
 	term_mouse.button = button;
 	term_mouse.mods = mods(m);
+	if(shift_down)		/* a move comes without its modifiers */
+		term_mouse.mods |= K_SHIFT;
 	push(K_MOUSE);
 	term_mouse.clicks = 1;
 }
@@ -2023,6 +2056,7 @@ term_open(int *c, int *r)
 	/* the events first: a size the window manager gives it (now or
 	   later, as Wayland does) is seen */
 	glfwSetKeyCallback(win, key_cb);
+	glfwSetWindowFocusCallback(win, focus_cb);
 	glfwSetCharModsCallback(win, char_cb);	/* with Alt too: the char callback is not */
 	glfwSetMouseButtonCallback(win, button_cb);
 	glfwSetCursorPosCallback(win, pos_cb);

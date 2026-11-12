@@ -319,6 +319,12 @@ term_set_font_size(int px)
 	(void)px;
 }
 
+int
+term_shift(void)
+{
+	return (term_mouse.mods & K_SHIFT) != 0;	/* only the mouse tells it */
+}
+
 void
 term_stay(int on)
 {

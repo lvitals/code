@@ -94,6 +94,10 @@ struct mouse {
 	kcode mods;
 };
 extern struct mouse term_mouse;
+/* Shift is held now: a window knows it (a press or a release of Shift
+ * alone brings a K_NONE, to be drawn again); a terminal tells it only
+ * with the mouse (its last event) */
+int term_shift(void);
 
 /* the terminal: its size; 0 if it cannot be used */
 int term_open(int *cols, int *rows);
@@ -193,6 +197,9 @@ const char *plat_copy(const char *from, const char *to);
 /* moved (or renamed) to to, a name that is free; to another file system,
  * copied and then removed: 0, or why not */
 const char *plat_move(const char *from, const char *to);
+/* a file, or a folder and all that is in it, deleted for good (not to the
+ * Trash; a link: the link, not what it points to): 0, or why not all of it */
+const char *plat_delete(const char *path);
 /* what File > Explorer > Properties shows of a file or a folder */
 struct file_info {
 	int kind;		/* 1 file, 2 folder, 3 another kind (a device ...) */
