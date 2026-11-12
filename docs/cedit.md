@@ -395,7 +395,11 @@ shows the **Folder** and a **Search** line; under them the folder is a
 tree, and at its right a preview of the file under the mouse (or, with
 the keyboard, of the one chosen), highlighted as in Open File in Project
 (Alt+P).  A folder's preview lists what is in it.  The wheel over the
-preview scrolls it.  It always opens on the project folder (the one of
+preview scrolls it.  The bar between the tree and the preview (marked
+◀ ▶ in its middle) can be dragged with the mouse to the left or to the
+right, to read long paths; the Explorer opens with it in its first place
+each time.  Under the [Project Folder] button the project is named,
+greyed, as the status bar names it (`[code]`).  It always opens on the project folder (the one of
 Open Project Folder); from there
 you go into other folders, up, back and forward while it is open.
 

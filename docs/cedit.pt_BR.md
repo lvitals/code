@@ -396,7 +396,11 @@ Open File, mostra a **Folder** (pasta) e uma linha **Search** (busca);
 embaixo delas a pasta é uma árvore, e à direita há uma prévia do arquivo
 sob o mouse (ou, pelo teclado, do escolhido), colorida como no Open File
 in Project (Alt+P).  A prévia de uma pasta lista o que há nela.  A
-rodinha sobre a prévia a rola.  Ele sempre abre na pasta do projeto (a
+rodinha sobre a prévia a rola.  A barra entre a árvore e a prévia
+(marcada com ◀ ▶ no meio) pode ser arrastada com o mouse para a esquerda
+ou para a direita, para ler caminhos longos; o Explorer sempre abre com
+ela no lugar inicial.  Embaixo do botão [Project Folder] aparece o nome
+do projeto, acinzentado, como na barra de status (`[code]`).  Ele sempre abre na pasta do projeto (a
 do Open Project Folder); dali a pasta mostrada pode ser trocada (`..`,
 Backspace, Open numa pasta, voltar e avançar) enquanto ele está aberto.
 

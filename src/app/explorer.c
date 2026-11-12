@@ -22,6 +22,10 @@
  *           under the mouse; on no row, of the folder shown)
  *   Esc     the search emptied; nothing typed: closed
  *
+ * The bar between the tree and the preview (◀ ▶ in its middle) is dragged
+ * by the mouse; it opens where it was at first.  Under [Project Folder],
+ * dim, the project as the status bar names it: [code].
+ *
  * The search looks in all that is under the folder shown (a folder at a
  * time, while the editor is idle: the nearest first), by a fuzzy match of
  * the path, the best first.  Enter takes one (a folder: into it), Right
@@ -40,6 +44,7 @@
 
 #define PREVIEW_MIN	72	/* narrower: no preview */
 #define WHEEL		3
+#define SPLIT_MIN	14	/* the narrowest the tree or the preview is */
 #define FOUND_MAX	300000	/* the search: the most entries found */
 #define SLICE		30	/* ms: the search's walk, a turn */
 #define HIST_MAX	32
@@ -94,6 +99,10 @@ static struct node *follow;	/* chosen: stays chosen while more come */
 /* back (0) and forward (1): the folders shown before */
 static char hist[2][HIST_MAX][PATH_MAX_];
 static int nhist[2];
+
+static int split = -1;		/* the tree's columns (the bar between it and the
+				   preview, moved by the mouse); -1: as it opens */
+static char splitting;		/* the bar is dragged */
 
 static long pv_scroll;		/* the preview, moved by the wheel */
 static char pv_shown[PATH_MAX_];	/* of what: another starts again */
@@ -759,6 +768,8 @@ explorer_open(void)
 	cm = props = 0;
 	/* always from the project's folder (the current one) */
 	nhist[0] = nhist[1] = 0;
+	split = -1;		/* the bar where it is at first */
+	splitting = 0;
 	plat_cwd(cwd, sizeof cwd);
 	node_free(root);
 	root = 0;
@@ -1606,7 +1617,7 @@ draw_hit(const struct node *n, int x, int y, int x2, int at)
 {
 	static unsigned char mark[PATH_MAX_];
 	const char *p = rel_path(n);
-	int len = (int)strlen(p), name, j, k, a;
+	int len = (int)strlen(p), name, j, k, a, room;
 
 	if(len >= (int)sizeof mark)
 		len = (int)sizeof mark - 1;
@@ -1615,7 +1626,15 @@ draw_hit(const struct node *n, int x, int y, int x2, int at)
 	if(n->dir)
 		scr_put(x, y, G_SCROLLRIGHT, at | F_DIM);
 	x += 2;
-	for(j = 0; j < len && x <= x2; j += k) {
+	/* too long: its start goes (the name is what is looked for) */
+	room = x2 - x + 1 - n->dir;
+	j = 0;
+	if(room > 1 && text_width(p) > room) {
+		scr_put(x++, y, G_ELLIPSIS, at | F_DIM);
+		while(j < len && text_width(p + j) > room - 1)
+			j += u8len((unsigned char)p[j]);
+	}
+	for(; j < len && x <= x2; j += k) {
 		k = u8len((unsigned char)p[j]);
 		if(j + k > len)
 			k = len - j;
@@ -1692,7 +1711,31 @@ draw_explorer(void)
 	lh = h - 6;
 	tx2 = x + w - 2;	/* the tree from x + 1; the preview after it */
 	if(w >= PREVIEW_MIN) {
-		tx2 = x + w * 2 / 5;
+		/* the bar between them: dragged by the mouse (a press on it,
+		   moved, let go); at first two fifths in */
+		if(!over && ui_key == K_MOUSE && ui_mouse_ok() && !cm) {
+			i = split >= 0 ? x + split : x + w * 2 / 5;
+			if(ms->kind == M_PRESS && ms->button == MB_LEFT && ms->x == i + 1 &&
+			   ms->y >= y + 3 && ms->y < y + h - 3) {
+				splitting = 1;
+				ui_key = 0;
+			} else if(splitting && ms->kind == M_DRAG) {
+				split = ms->x - 1 - x;
+				ui_key = 0;
+				ui_again = 1;
+			} else if(splitting && ms->kind == M_RELEASE) {
+				splitting = 0;
+				ui_key = 0;
+				ui_again = 1;
+			}
+		}
+		tx2 = split >= 0 ? x + split : x + w * 2 / 5;
+		if(tx2 < x + SPLIT_MIN)	/* each keeps some room */
+			tx2 = x + SPLIT_MIN;
+		if(tx2 > x + w - 2 - SPLIT_MIN)
+			tx2 = x + w - 2 - SPLIT_MIN;
+		if(split >= 0)
+			split = tx2 - x;
 		px1 = tx2 + 2;
 	}
 	k = over ? 0 : ui_key;
@@ -1810,6 +1853,25 @@ draw_explorer(void)
 	   !ask && !is_project())
 		go_project();
 	scr_text(x + 2, y + 2, ask_label[ask], S_FLOAT, x + 2 + lw);
+	/* under the button, dim: the project, named as the status bar has
+	   it ([code]) */
+	r = x + w - 3;		/* the last column of the field, or the count */
+	if(i < x + w - 2) {
+		char name[sizeof project_name + 2];
+		int n;
+
+		name[0] = '[';
+		strcpy(name + 1, project_name);
+		strcat(name, "]");
+		/* whole, centred under it: one wider takes room from the field */
+		n = i + (x + w - 3 - i + 1 - text_width(name)) / 2;
+		if(n + text_width(name) - 1 > x + w - 3)
+			n = x + w - 3 - text_width(name) + 1;
+		if(n < x + 2 + lw + 2)
+			n = x + 2 + lw + 2;
+		scr_text(n, y + 2, name, S_FLOAT | F_DIM, x + w - 2);
+		r = (n < i ? n : i) - 2;
+	}
 	/* the search: what it found, at the right of the field */
 	count[0] = 0;
 	if(searching && !ask) {
@@ -1818,10 +1880,12 @@ draw_explorer(void)
 		    " found");
 	}
 	cw = count[0] ? text_width(count) + 1 : 0;
-	if(cw)
-		scr_text(x + w - 2 - cw, y + 2, count, S_FLOAT | F_DIM, x + w - 2);
+	if(cw && r - cw > x + 2 + lw + 8)
+		scr_text(r - cw + 2, y + 2, count, S_FLOAT | F_DIM, r + 1);
+	else
+		cw = 0;
 	field = ask ? &answer : &query;
-	if(ui_edit(ID_P_NAME, x + 2 + lw, y + 2, w - 4 - lw - cw, field, S_FLOAT) && !ask) {
+	if(ui_edit(ID_P_NAME, x + 2 + lw, y + 2, r - cw - (x + 2 + lw) + 1, field, S_FLOAT) && !ask) {
 		if(query.len && issep(query.s[query.len - 1]))
 			typed_folder();	/* name/: into it */
 		stale = 1;
@@ -1892,7 +1956,12 @@ draw_explorer(void)
 		    "Looking..." : "Nothing matches", S_LIST | F_DIM, tx2);
 	if(px1) {		/* the preview */
 		for(i = 0; i < lh; i++)
-			scr_put(tx2 + 1, y + 3 + i, G_V, S_FLOAT);
+			scr_put(tx2 + 1, y + 3 + i, G_V, splitting ? S_FOCUS : S_FLOAT);
+		/* in its middle, one over the other: ◀ ▶, it can be moved */
+		if(lh >= 4) {
+			scr_put(tx2 + 1, y + 3 + lh / 2 - 1, G_SCROLLLEFT, S_FLOAT | F_DIM);
+			scr_put(tx2 + 1, y + 3 + lh / 2, G_SCROLLRIGHT, S_FLOAT | F_DIM);
+		}
 		scr_fill(px1, y + 3, x + w - 2, y + 3 + lh - 1, ' ', S_TEXT);
 		view = hov >= 0 && hov < nrows && rows[hov] ? hov : sel;
 		draw_view(view, px1 + 1, y + 3, x + w - 3, y + 3 + lh - 1);
