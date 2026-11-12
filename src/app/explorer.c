@@ -1830,7 +1830,7 @@ draw_explorer(void)
 		"Enter: paste the copy   Esc: cancel" };
 	int mx = scr_cols >= 60 ? scr_cols / 20 : 0, my = scr_rows >= 20 ? scr_rows / 20 : 0;
 	int w = scr_cols - 2 * mx, h = scr_rows - 2 * my;
-	int x, y, lw = 12, lh, tx2, px1 = 0, i, r, at, lf, inlist, nav, act = -1, hw, cx, bx;
+	int x, y, lw, lh, tx2, px1 = 0, i, r, at, lf, inlist, nav, act = -1, hw, cx, bx;
 	int over, view, empty, searching, cw;
 	char count[48];
 	struct mouse *ms = &term_mouse;
@@ -1990,6 +1990,11 @@ draw_explorer(void)
 	if(stale)
 		rebuild();
 
+	/* the fields one space after the longer label */
+	lw = text_width("Folder:");
+	if(text_width(ask_label[ask]) > lw)
+		lw = text_width(ask_label[ask]);
+	lw++;
 	scr_text(x + 2, y + 1, "Folder:", S_FLOAT, x + 2 + lw);
 	/* at its right, always: [Project Folder], back to the project's
 	   (Alt+Home) */
