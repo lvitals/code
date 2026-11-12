@@ -417,6 +417,7 @@ you go into other folders, up, back and forward while it is open.
 | Ctrl+X / Ctrl+C / Ctrl+V | Cut / Copy / Paste (into the folder chosen, or the one the file chosen is in) |
 | F2 | Rename |
 | Del | Move to Trash (asked first) |
+| Alt+F | New File: an empty file, named at first as the editor names a new document (`Untitled-1.txt`, the first free) |
 | Alt+N | New Folder |
 | Alt+Enter | Properties |
 | F5 | Read the folders again |
@@ -428,11 +429,11 @@ you go into other folders, up, back and forward while it is open.
 
 The menu has **Open** (a file in the editor; a folder becomes the one
 shown), **Set as Project Folder** (the folder, or on no entry the folder
-shown, becomes the project's, as Open Project Folder does), **New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**,
+shown, becomes the project's, as Open Project Folder does), **New File**, **New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**,
 **Move To**, **Rename**, **Move to Trash**, **Collapse All** and
-**Properties**; Collapse All is also a button at the bottom.  What
-needs a name asks for it in the Search line ("New folder:", "New
-name:", "Copy to:", "Move to:"): Enter does it, Esc does not.  Copy To
+**Properties**; New File, New Folder, Trash and Collapse All are also buttons at the bottom.  What
+needs a name asks for it in the Search line ("New file:", "New
+folder:", "New name:", "Copy to:", "Move to:"): Enter does it, Esc does not.  Copy To
 and Move To start with the folder the entry is in; a folder typed there
 takes the entry inside it, another name is the new name (`~/` is the
 home; a relative path is from the folder shown).

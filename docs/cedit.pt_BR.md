@@ -418,6 +418,7 @@ Backspace, Open numa pasta, voltar e avançar) enquanto ele está aberto.
 | Ctrl+X / Ctrl+C / Ctrl+V | Recortar / Copiar / Colar (na pasta escolhida, ou na pasta do arquivo escolhido) |
 | F2 | Renomear |
 | Del | Mover para a Lixeira (com confirmação) |
+| Alt+F | New File: um arquivo vazio, com o nome inicial que o editor dá a um documento novo (`Untitled-1.txt`, o primeiro livre) |
 | Alt+N | New Folder (pasta nova) |
 | Alt+Enter | Properties (propriedades) |
 | F5 | Lê as pastas de novo |
@@ -430,11 +431,12 @@ Backspace, Open numa pasta, voltar e avançar) enquanto ele está aberto.
 O menu tem **Open** (um arquivo no editor; uma pasta passa a ser a
 mostrada), **Set as Project Folder** (a pasta, ou fora das entradas a
 pasta mostrada, passa a ser a do projeto, como no Open Project Folder),
-**New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**
+**New File**, **New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**
 (copiar para), **Move To** (mover para), **Rename** (renomear), **Move
-to Trash**, **Collapse All** (recolher tudo) e **Properties**; o
-Collapse All também é um botão embaixo.  O que precisa de um nome o pede na linha
-Search ("New folder:", "New name:", "Copy to:", "Move to:"): Enter
+to Trash**, **Collapse All** (recolher tudo) e **Properties**; New File,
+New Folder, Trash e Collapse All também são botões embaixo.  O que precisa
+de um nome o pede na linha Search ("New file:", "New folder:", "New
+name:", "Copy to:", "Move to:"): Enter
 faz, Esc cancela.  Copy To e Move To começam com a pasta onde a entrada
 está; uma pasta digitada ali recebe a entrada dentro dela, outro nome é
 o novo nome (`~/` é a pasta pessoal; um caminho relativo parte da pasta

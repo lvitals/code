@@ -13,6 +13,8 @@
  *   Alt+Left, Alt+Right  back, forward (the folders shown before)
  *   Alt+Home, [Project Folder]  the project's folder
  *   Alt+O   Set as Project Folder: the folder chosen (a file: the one shown)
+ *   Alt+F   New File (empty; the name at first Untitled-N.txt, as the
+ *           editor names a new document)
  *   Alt+N   New Folder       F2  Rename        Del  Move to Trash
  *   Ctrl+X  Cut   Ctrl+C  Copy   Ctrl+V  Paste (into the folder chosen, or
  *           the one the file chosen is in)
@@ -32,7 +34,7 @@
  * shows it in the tree.  What is typed with a separator at its end is a
  * folder gone into, as in Open File: name/, ~/ the home, / the root.
  *
- * The menu: Open, Set as Project Folder, New Folder, Cut, Copy, Paste,
+ * The menu: Open, Set as Project Folder, New File, New Folder, Cut, Copy, Paste,
  * Copy To..., Move To..., Rename..., Move to Trash, Collapse All,
  * Properties.  What asks for a name (a new folder, a new name, where to
  * copy or move to) asks it in the field of the search: Enter does it, Esc
@@ -67,7 +69,7 @@ static char stale;		/* the rows made again */
 static char keep[PATH_MAX_];	/* to be chosen once they are */
 static struct edl query;
 
-enum { ASK_NONE, ASK_NEWDIR, ASK_RENAME, ASK_COPYTO, ASK_MOVETO };
+enum { ASK_NONE, ASK_NEWDIR, ASK_RENAME, ASK_COPYTO, ASK_MOVETO, ASK_NEWFILE };
 static int ask;			/* the field asks for a name */
 static struct edl answer;
 static char ask_path[PATH_MAX_];	/* of what: the folder of a new one, or
@@ -1049,6 +1051,42 @@ do_trash(int r)
 	st.trash = mem_strdup(path);	/* dialogs.c asks, Yes: explorer_changed */
 }
 
+/* the name of a new file in dir, as the editor names a new document:
+ * Untitled-N.txt, the first N free */
+static void
+untitled(const char *dir, char *out)
+{
+	char path[PATH_MAX_ + 2];
+	int i;
+
+	for(i = 1; i < 10000; i++) {
+		strcpy(out, "Untitled-");
+		udec(out + strlen(out), (pos_t)i);
+		strcat(out, ".txt");
+		path_join(path, dir, out);
+		if(file_kind(path) == 0)
+			return;
+	}
+}
+
+/* an empty file made at path (none of that name before): 0 if it was not
+ * (said why) */
+static int
+make_file(const char *path)
+{
+	int h;
+
+	if(file_kind(path) != 0) {
+		error("There is one of that name already: ", path);
+		return 0;
+	}
+	if((h = file_open(path, 1)) < 0 || file_close(h) != 0) {
+		error("Cannot make the file: ", path);
+		return 0;
+	}
+	return 1;
+}
+
 /* the field asks for a name: what for (k), of row r */
 static void
 ask_begin(int k, int r)
@@ -1059,6 +1097,10 @@ ask_begin(int k, int r)
 	if(k == ASK_NEWDIR) {
 		row_folder(r, ask_path);
 		edl_set(&answer, "");
+	} else if(k == ASK_NEWFILE) {	/* the editor's name, to be changed */
+		row_folder(r, ask_path);
+		untitled(ask_path, dir);
+		edl_set(&answer, dir);
 	} else {
 		if(row_path(r, path) != 1) {
 			error("Choose a file or a folder in the tree", 0);
@@ -1101,6 +1143,17 @@ ask_done(void)
 			why("Cannot make the folder", r, path);
 			return 0;
 		}
+		changed_to(path);
+		return 1;
+	case ASK_NEWFILE:
+		if(*name == 0)
+			return 1;
+		if(bad_name(name))
+			return 0;
+		path_join(path, ask_path, name);
+		path_normalize(path);
+		if(!make_file(path))
+			return 0;
 		changed_to(path);
 		return 1;
 	case ASK_RENAME:
@@ -1347,7 +1400,7 @@ is_project(void)
 
 /* --- the menu (the right button, Shift+F10) ------------------------------ */
 
-enum { C_OPEN, C_PROJECT, C_NEWDIR, C_S1, C_CUT, C_COPY, C_PASTE, C_S2, C_COPYTO, C_MOVETO,
+enum { C_OPEN, C_PROJECT, C_NEWFILE, C_NEWDIR, C_S1, C_CUT, C_COPY, C_PASTE, C_S2, C_COPYTO, C_MOVETO,
 	C_RENAME, C_TRASH, C_S3, C_COLLAPSE, C_PROPS, C_COUNT };
 static const struct {
 	const char *text, *keys;
@@ -1355,6 +1408,7 @@ static const struct {
 } cm_items[C_COUNT] = {
 	{ "Open", "Enter", 'O' },
 	{ "Set as Project Folder", KEY_ALT "+O", 'S' },
+	{ "New File" DOTS, KEY_ALT "+F", 'F' },
 	{ "New Folder" DOTS, KEY_ALT "+N", 'N' },
 	{ "-", "", 0 },
 	{ "Cut", KEY_CTRL "+X", 'T' },
@@ -1379,6 +1433,7 @@ cm_usable(int i)
 	case C_S1: case C_S2: case C_S3:
 		return 0;
 	case C_NEWDIR:
+	case C_NEWFILE:
 	case C_COLLAPSE:
 		return 1;
 	case C_PASTE:
@@ -1443,6 +1498,7 @@ cm_do(int i)
 	switch(i) {
 	case C_OPEN: activate(r); break;
 	case C_PROJECT: set_project(r); break;
+	case C_NEWFILE: ask_begin(ASK_NEWFILE, r); break;
 	case C_NEWDIR: ask_begin(ASK_NEWDIR, r); break;
 	case C_CUT: do_clip(r, 1); break;
 	case C_COPY: do_clip(r, 0); break;
@@ -1684,10 +1740,11 @@ draw_explorer(void)
 	static const char *const shint =
 	    "Enter: open (a folder: go in)   Right: show in the tree   Esc: clear the search";
 	static const char *const ask_label[] = { "Search:", "New folder:", "New name:",
-		"Copy to:", "Move to:" };
+		"Copy to:", "Move to:", "New file:" };
 	static const char *const ask_hint[] = { "", "Enter: make the folder   Esc: cancel",
 		"Enter: rename   Esc: cancel", "Enter: copy (a folder: into it)   Esc: cancel",
-		"Enter: move (a folder: into it)   Esc: cancel" };
+		"Enter: move (a folder: into it)   Esc: cancel",
+		"Enter: make the file (empty)   Esc: cancel" };
 	int mx = scr_cols >= 60 ? scr_cols / 20 : 0, my = scr_rows >= 20 ? scr_rows / 20 : 0;
 	int w = scr_cols - 2 * mx, h = scr_rows - 2 * my;
 	int x, y, lw = 12, lh, tx2, px1 = 0, i, r, at, lf, inlist, nav, act = -1, hw, cx, bx;
@@ -1771,6 +1828,8 @@ draw_explorer(void)
 		return;
 	} else if(k == (K_ALT | 'N') || k == (K_ALT | 'n'))
 		ask_begin(ASK_NEWDIR, sel);
+	else if(k == (K_ALT | 'F') || k == (K_ALT | 'f'))
+		ask_begin(ASK_NEWFILE, sel);
 	else if(k == (K_CTRL | 'H') || k == (K_ALT | 'H')) {
 		st.phidden = !st.phidden;
 		settings_find_changed();
@@ -1977,15 +2036,26 @@ draw_explorer(void)
 		settings_find_changed();
 		explorer_changed();
 	}
-	if(x + 2 + hw + 2 + text_width("New Folder") + 4 + text_width("Trash (Del)") + 2 < bx - 2) {
-		if(ui_button(ID_P_NEWDIR, x + 2 + hw + 2, y + h - 2, "New Folder", 'N', S_FLOAT))
+	{	/* from the left, as many as fit before [Open] */
+		static const char *const bt[] = { "New File", "New Folder", "Trash (Del)",
+			"Collapse All" };
+		static const int bid[] = { ID_X_NEWFILE, ID_P_NEWDIR, ID_P_TRASH, ID_X_COLLAPSE };
+		static const char bacc[] = { 'F', 'N', 0, 'C' };
+		int b, pressed = -1;
+
+		i = x + 2 + hw + 2;
+		for(b = 0; b < 4 && i + text_width(bt[b]) + 1 < bx - 2; b++) {
+			if(ui_button(bid[b], i, y + h - 2, bt[b], bacc[b], S_FLOAT))
+				pressed = b;
+			i += text_width(bt[b]) + 4;
+		}
+		if(pressed == 0)
+			ask_begin(ASK_NEWFILE, sel);
+		else if(pressed == 1)
 			ask_begin(ASK_NEWDIR, sel);
-		if(ui_button(ID_P_TRASH, x + 2 + hw + 2 + text_width("New Folder") + 4, y + h - 2,
-		    "Trash (Del)", 0, S_FLOAT))
+		else if(pressed == 2)
 			do_trash(sel);
-		i = x + 2 + hw + 2 + text_width("New Folder") + 4 + text_width("Trash (Del)") + 4;
-		if(i + text_width("Collapse All") + 2 < bx - 2 &&
-		   ui_button(ID_X_COLLAPSE, i, y + h - 2, "Collapse All", 'C', S_FLOAT) && !ask)
+		else if(pressed == 3 && !ask)
 			collapse_all();
 	}
 	if(bx > x + 2 + hw && ui_button(ID_P_OPEN, bx, y + h - 2, "Open", 0, S_FLOAT) && !ask)
