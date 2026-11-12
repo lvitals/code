@@ -762,6 +762,14 @@ main(int argc, char **argv)
 				continue;
 			}
 		}
+		/* idle: the Explorer's search walks the folders, the same */
+		if(explorer_busy()) {
+			explorer_work();
+			if(!term_keyready()) {
+				key = K_NONE;
+				continue;
+			}
+		}
 		/* idle: the lines counted a slice at a time; drawn again every
 		   so often (the numbers, the progress), and when all are */
 		if(docs && D->linenums && !buf_lines_known()) {

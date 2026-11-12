@@ -359,13 +359,19 @@ is a file manager: the Folder and Search lines of Open File, the folder
 as a tree under them, and a preview of the file under the mouse (or
 chosen) at its right.
 .Ic Enter
-opens or closes a folder, or opens a file in the editor;
+goes into a folder, or opens a file in the editor;
 .Ic Right
 and
 .Ic Left
-open and close a folder;
+expand and collapse a folder in the tree;
 .Ic Backspace
 goes to the folder above;
+.Ic Alt+Left
+and
+.Ic Alt+Right
+go back and forward;
+.Ic Alt+Home
+goes to the project folder;
 .Ic Ctrl+X ,
 .Ic Ctrl+C
 and
@@ -380,11 +386,15 @@ makes a folder;
 .Ic Alt+Enter
 shows the properties;
 .Ic F5
-reads the folders again.
+reads the folders again;
+.Ic Alt+C
+closes every folder of the tree (Collapse All).
+It always opens on the project folder.
+The search looks in all the subfolders of the folder shown.
 The right button
 .Pq or Ic Shift+F10
-opens a menu: Open, New Folder, Cut, Copy, Paste, Copy To, Move To,
-Rename, Move to Trash, Properties.
+opens a menu: Open, Set as Project Folder, New Folder, Cut, Copy, Paste, Copy To, Move To,
+Rename, Move to Trash, Collapse All, Properties.
 A name is asked for in the Search line (Enter does it, Esc does not).
 A document open in the editor follows its file when it is renamed or
 moved.

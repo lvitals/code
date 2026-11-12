@@ -364,13 +364,19 @@ File > Explorer
 pasta como árvore embaixo delas e, à direita, uma prévia do arquivo sob
 o mouse (ou escolhido).
 .Ic Enter
-abre ou fecha uma pasta, ou abre um arquivo no editor;
+entra numa pasta, ou abre um arquivo no editor;
 .Ic Right
 e
 .Ic Left
-abrem e fecham uma pasta;
+expandem e recolhem uma pasta na árvore;
 .Ic Backspace
 vai à pasta de cima;
+.Ic Alt+Left
+e
+.Ic Alt+Right
+voltam e avançam;
+.Ic Alt+Home
+vai à pasta do projeto;
 .Ic Ctrl+X ,
 .Ic Ctrl+C
 e
@@ -385,11 +391,15 @@ cria uma pasta;
 .Ic Alt+Enter
 mostra as propriedades;
 .Ic F5
-lê as pastas de novo.
+lê as pastas de novo;
+.Ic Alt+C
+recolhe todas as pastas da árvore (Collapse All).
+Ele sempre abre na pasta do projeto.
+A busca procura em todas as subpastas da pasta mostrada.
 O botão direito
 .Pq ou Ic Shift+F10
-abre um menu: Open, New Folder, Cut, Copy, Paste, Copy To, Move To,
-Rename, Move to Trash, Properties.
+abre um menu: Open, Set as Project Folder, New Folder, Cut, Copy, Paste, Copy To, Move To,
+Rename, Move to Trash, Collapse All, Properties.
 Um nome é pedido na linha Search (Enter faz, Esc cancela).
 Um documento aberto no editor acompanha o arquivo quando ele é
 renomeado ou movido.

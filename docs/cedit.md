@@ -395,28 +395,37 @@ shows the **Folder** and a **Search** line; under them the folder is a
 tree, and at its right a preview of the file under the mouse (or, with
 the keyboard, of the one chosen), highlighted as in Open File in Project
 (Alt+P).  A folder's preview lists what is in it.  The wheel over the
-preview scrolls it.
+preview scrolls it.  It always opens on the project folder (the one of
+Open Project Folder, marked "(project)" next to the Folder); from there
+you go into other folders, up, back and forward while it is open.
 
 | Key, mouse | Action |
 |---|---|
 | Up, Down, PgUp, PgDn, Home, End | Choose |
-| Enter, double click | A folder: open or close it in the tree; a file: open it in the editor |
-| Right / Left | Open a folder (again: to its first entry) / close it (again: to its parent) |
-| Click on the arrow | Open or close the folder |
-| Backspace, Alt+Up | The folder above (`..` too) |
+| Enter, double click | A folder: go into it (it becomes the folder shown); a file: open it in the editor; `..`: the folder above |
+| Right / Left | Expand a folder in the tree (again: to its first entry) / collapse it (again: to its parent) |
+| Click on a folder | Expand or collapse it |
+| Backspace, Alt+Up | The folder above |
+| Alt+Left / Alt+Right | Back / Forward (the folders shown before) |
+| Alt+Home | The project folder |
+| `name/`, `~/`, `/` typed | Go into that folder (as in Open File) |
 | Ctrl+X / Ctrl+C / Ctrl+V | Cut / Copy / Paste (into the folder chosen, or the one the file chosen is in) |
 | F2 | Rename |
 | Del | Move to Trash (asked first) |
 | Alt+N | New Folder |
 | Alt+Enter | Properties |
 | F5 | Read the folders again |
+| Alt+C | Collapse All: close every folder of the tree |
 | Alt+H | Show the hidden files |
 | Right button, Shift+F10 | The menu of that entry (on no entry: of the folder shown) |
-| Ctrl+E, Esc | Close |
+| Esc | Clear the search; with nothing typed, close |
+| Ctrl+E | Close |
 
 The menu has **Open** (a file in the editor; a folder becomes the one
-shown), **New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**,
-**Move To**, **Rename**, **Move to Trash** and **Properties**.  What
+shown), **Set as Project Folder** (the folder, or on no entry the folder
+shown, becomes the project's, as Open Project Folder does), **New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**,
+**Move To**, **Rename**, **Move to Trash**, **Collapse All** and
+**Properties**; Collapse All is also a button at the bottom.  What
 needs a name asks for it in the Search line ("New folder:", "New
 name:", "Copy to:", "Move to:"): Enter does it, Esc does not.  Copy To
 and Move To start with the folder the entry is in; a folder typed there
@@ -435,9 +444,14 @@ Properties shows the name, the kind, the location, the size (of a
 folder: of all that is in it, counted for at most two seconds), the
 date of the last change, the permissions and the owner.
 
-The search narrows the tree to the names that match (a fuzzy match, as
-Alt+P has it) in the folders that are open, with the folders they are
-in (greyed).
+The search looks in everything under the folder shown, in all its
+subfolders (the nearest first, while the editor is idle; the count is at
+the right of the line): the folders and files whose path matches (a fuzzy
+match, as Alt+P has it), the best first, shown with their path (the
+matched letters underlined).  Enter on a folder found goes into it, on a
+file opens it; Right (at the end of what is typed, or on the list) shows
+it in the tree; the menu works on them as in the tree.  The hidden
+entries are left out unless Hidden is on.
 
 ### How files are saved
 

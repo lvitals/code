@@ -67,7 +67,7 @@ enum {
 	ID_IND_TYPE, ID_IND_WIDTH, ID_ENC_CONVERT, ID_ENC_REOPEN,
 	ID_OK, ID_YES, ID_NO, ID_CANCEL, ID_GOTO, ID_LIST, ID_G_CLOSE,
 	ID_P_NAME, ID_P_LIST, ID_P_SUGGEST, ID_P_HIDDEN, ID_P_FOLDER, ID_P_NEWDIR, ID_P_TRASH, ID_P_SAVE, ID_P_OPEN, ID_P_CLOSE, ID_FILTER, ID_FINDER,
-	ID_ENC_FIND, ID_ENC_LIST
+	ID_ENC_FIND, ID_ENC_LIST, ID_X_COLLAPSE
 };
 
 enum { SEARCH_HIDDEN, SEARCH_FIND, SEARCH_REPLACE };
@@ -228,6 +228,8 @@ void explorer_open(void);
 void explorer_close(void);
 void draw_explorer(void);
 void explorer_changed(void);	/* what it shows changed: read again */
+int explorer_busy(void);	/* its search walks the folders: while idle */
+void explorer_work(void);	/* some of it, until a key waits */
 
 /* jumps.c: the places the cursor jumped from (Alt+Left, Alt+Right) */
 void jump_push(void);		/* before a jump: where the cursor is */

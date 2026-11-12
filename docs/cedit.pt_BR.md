@@ -396,29 +396,40 @@ Open File, mostra a **Folder** (pasta) e uma linha **Search** (busca);
 embaixo delas a pasta é uma árvore, e à direita há uma prévia do arquivo
 sob o mouse (ou, pelo teclado, do escolhido), colorida como no Open File
 in Project (Alt+P).  A prévia de uma pasta lista o que há nela.  A
-rodinha sobre a prévia a rola.
+rodinha sobre a prévia a rola.  Ele sempre abre na pasta do projeto (a
+do Open Project Folder); dali a pasta mostrada pode ser trocada (`..`,
+Backspace, Open numa pasta, voltar e avançar) enquanto ele está aberto;
+a pasta do projeto aparece marcada com "(project)" ao lado da Folder.
 
 | Tecla, mouse | Ação |
 |---|---|
 | Up, Down, PgUp, PgDn, Home, End | Escolhe |
-| Enter, clique duplo | Pasta: abre ou fecha na árvore; arquivo: abre no editor |
-| Right / Left | Abre a pasta (de novo: vai à primeira entrada) / fecha (de novo: vai à pasta de cima) |
-| Clique na seta | Abre ou fecha a pasta |
-| Backspace, Alt+Up | A pasta de cima (`..` também) |
+| Enter, clique duplo | Pasta: entra nela (vira a pasta mostrada); arquivo: abre no editor; `..`: a pasta de cima |
+| Right / Left | Expande a pasta na árvore (de novo: vai à primeira entrada) / recolhe (de novo: vai à pasta de cima) |
+| Clique numa pasta | Expande ou recolhe |
+| Backspace, Alt+Up | A pasta de cima |
+| Alt+Left / Alt+Right | Voltar / Avançar (as pastas mostradas antes) |
+| Alt+Home | A pasta do projeto |
+| `nome/`, `~/`, `/` digitado | Entra nessa pasta (como no Open File) |
 | Ctrl+X / Ctrl+C / Ctrl+V | Recortar / Copiar / Colar (na pasta escolhida, ou na pasta do arquivo escolhido) |
 | F2 | Renomear |
 | Del | Mover para a Lixeira (com confirmação) |
 | Alt+N | New Folder (pasta nova) |
 | Alt+Enter | Properties (propriedades) |
 | F5 | Lê as pastas de novo |
+| Alt+C | Collapse All: recolhe todas as pastas da árvore |
 | Alt+H | Mostra os arquivos ocultos |
 | Botão direito, Shift+F10 | O menu daquela entrada (fora das entradas: da pasta mostrada) |
-| Ctrl+E, Esc | Fecha |
+| Esc | Limpa a busca; sem nada digitado, fecha |
+| Ctrl+E | Fecha |
 
 O menu tem **Open** (um arquivo no editor; uma pasta passa a ser a
-mostrada), **New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**
+mostrada), **Set as Project Folder** (a pasta, ou fora das entradas a
+pasta mostrada, passa a ser a do projeto, como no Open Project Folder),
+**New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**
 (copiar para), **Move To** (mover para), **Rename** (renomear), **Move
-to Trash** e **Properties**.  O que precisa de um nome o pede na linha
+to Trash**, **Collapse All** (recolher tudo) e **Properties**; o
+Collapse All também é um botão embaixo.  O que precisa de um nome o pede na linha
 Search ("New folder:", "New name:", "Copy to:", "Move to:"): Enter
 faz, Esc cancela.  Copy To e Move To começam com a pasta onde a entrada
 está; uma pasta digitada ali recebe a entrada dentro dela, outro nome é
@@ -437,9 +448,15 @@ Properties mostra o nome, o tipo, o local, o tamanho (de uma pasta: de
 tudo o que há nela, contado por no máximo dois segundos), a data da
 última alteração, as permissões e o dono.
 
-A busca reduz a árvore aos nomes que combinam (uma busca aproximada,
-como no Alt+P) nas pastas abertas, com as pastas onde estão
-(acinzentadas).
+A busca procura em tudo o que há sob a pasta mostrada, em todas as
+subpastas (as mais próximas primeiro, enquanto o editor está ocioso; a
+contagem fica à direita da linha): as pastas e os arquivos cujo caminho
+combina (busca aproximada, como no Alt+P), os melhores primeiro,
+mostrados com o caminho (as letras que combinaram sublinhadas).  Enter
+numa pasta encontrada entra nela, num arquivo o abre; Right (no fim do
+que foi digitado, ou na lista) a mostra na árvore; o menu funciona nelas
+como na árvore.  As entradas ocultas ficam de fora, a não ser com Hidden
+ligado.
 
 ### Como os arquivos são salvos
 

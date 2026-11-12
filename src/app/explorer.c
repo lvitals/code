@@ -2,24 +2,36 @@
  * the folder shown (Folder:) and a search (Search:); under them the
  * folder as a tree, and at its right a preview of the file under the mouse
  * (or of the one chosen), as Alt+P has it; of a folder, what is in it.
+ * It opens on the project's folder each time.
  *
- *   Up, Down, PgUp, PgDn  choose        Enter   a folder: opened or closed
- *   Right   a folder opened (again: into its first)  a file: opened in
- *   Left    closed (again: to the folder it is in)   the editor
+ *   Up, Down, PgUp, PgDn, Home, End   choose
+ *   Enter, a double click   a folder: into it (the folder shown); a file:
+ *           opened in the editor; ..: the folder above
+ *   Right, a click  a folder opened in the tree (Right again: to its first)
+ *   Left    closed (again: to the folder it is in)
  *   Backspace, Alt+Up  the folder above (nothing typed)
+ *   Alt+Left, Alt+Right  back, forward (the folders shown before)
+ *   Alt+Home  the project's folder
  *   Alt+N   New Folder       F2  Rename        Del  Move to Trash
  *   Ctrl+X  Cut   Ctrl+C  Copy   Ctrl+V  Paste (into the folder chosen, or
  *           the one the file chosen is in)
  *   Alt+Enter  Properties    F5  Read again    Alt+H  Hidden
+ *   Alt+C   Collapse All: every folder of the tree closed
  *   Shift+F10  the menu of the one chosen (the right button: of the one
  *           under the mouse; on no row, of the folder shown)
+ *   Esc     the search emptied; nothing typed: closed
  *
- * The menu: Open, New Folder, Cut, Copy, Paste, Copy To..., Move To...,
- * Rename..., Move to Trash, Properties.  What asks for a name (a new
- * folder, a new name, where to copy or move to) asks it in the field of
- * the search: Enter does it, Esc does not.  The search narrows the tree to
- * the names that match (and the folders they are in), of the folders
- * open. */
+ * The search looks in all that is under the folder shown (a folder at a
+ * time, while the editor is idle: the nearest first), by a fuzzy match of
+ * the path, the best first.  Enter takes one (a folder: into it), Right
+ * shows it in the tree.  What is typed with a separator at its end is a
+ * folder gone into, as in Open File: name/, ~/ the home, / the root.
+ *
+ * The menu: Open, Set as Project Folder, New Folder, Cut, Copy, Paste,
+ * Copy To..., Move To..., Rename..., Move to Trash, Collapse All,
+ * Properties.  What asks for a name (a new folder, a new name, where to
+ * copy or move to) asks it in the field of the search: Enter does it, Esc
+ * does not. */
 #include <stdlib.h>
 #include <string.h>
 #include "finder.h"
@@ -27,17 +39,20 @@
 
 #define PREVIEW_MIN	72	/* narrower: no preview */
 #define WHEEL		3
+#define FOUND_MAX	300000	/* the search: the most entries found */
+#define SLICE		30	/* ms: the search's walk, a turn */
+#define HIST_MAX	32
 
 /* a folder or a file of the tree */
 struct node {
 	struct node *up, **kid;	/* kid: of a folder read (loaded) */
 	int nkid, depth;	/* depth: 0 in the folder shown */
+	int idx;		/* found by the search: its index */
 	char dir, open, loaded, kept;
 	char name[1];		/* the root: its whole path */
 };
 
 static struct node *root;
-static char last_root[PATH_MAX_];	/* where it opens again */
 static struct node **rows;	/* those shown; 0 is .. */
 static unsigned char *rmatch;	/* the search: the name matches (else, a
 				   folder it is in) */
@@ -63,6 +78,21 @@ static int nprops;
 static char cm;			/* the menu is open */
 static int cmx, cmy, cmsel, cm_row;	/* cm_row: of what (-1: the folder shown) */
 static char cm_drag;		/* the button moved, held, since it opened */
+
+/* the search: what is under the folder shown, as nodes of their own
+ * (no up: the name is the whole path), found a folder at a time */
+static struct node **found;
+static int *fscore;
+static int nfound, foundcap, scored;	/* scored: the first ones, by the query */
+static char **queue;		/* the folders to read */
+static int qhead, qn, qcap;
+static char walking, wstale = 1, wfull;
+static char lastq[EDL_MAX];	/* the query they were scored by */
+static struct node *follow;	/* chosen: stays chosen while more come */
+
+/* back (0) and forward (1): the folders shown before */
+static char hist[2][HIST_MAX][PATH_MAX_];
+static int nhist[2];
 
 static long pv_scroll;		/* the preview, moved by the wheel */
 static char pv_shown[PATH_MAX_];	/* of what: another starts again */
@@ -274,6 +304,192 @@ build(struct node *n, int searching)
 	return any;
 }
 
+/* --- the search ---------------------------------------------------------- */
+
+/* what was found let go (the rows that show it with it) */
+static void
+search_free(void)
+{
+	int i;
+
+	nrows = 0;
+	hov = -1;
+	follow = 0;
+	stale = 1;
+	for(i = 0; i < nfound; i++)
+		node_free(found[i]);
+	nfound = scored = 0;
+	for(i = qhead; i < qn; i++)
+		free(queue[i]);
+	qhead = qn = 0;
+	walking = wfull = 0;
+	wstale = 1;
+}
+
+static void
+queue_push(const char *path)
+{
+	char **q, *p;
+
+	if(qn == qcap) {
+		if(qhead > 0) {	/* the room of those read */
+			memmove(queue, queue + qhead, (size_t)(qn - qhead) * sizeof *queue);
+			qn -= qhead;
+			qhead = 0;
+		}
+		if(qn == qcap) {
+			qcap = qcap ? qcap * 2 : 256;
+			if((q = realloc(queue, (size_t)qcap * sizeof *queue)) == 0) {
+				qcap = qn;
+				return;
+			}
+			queue = q;
+		}
+	}
+	if((p = malloc(strlen(path) + 1)) == 0)
+		return;
+	strcpy(p, path);
+	queue[qn++] = p;
+}
+
+static void
+found_add(const char *path, int dir)
+{
+	struct node **f, *n;
+	int *sc;
+
+	if(nfound >= FOUND_MAX) {
+		wfull = 1;
+		walking = 0;
+		return;
+	}
+	if(nfound == foundcap) {
+		foundcap = foundcap ? foundcap * 2 : 1024;
+		f = realloc(found, (size_t)foundcap * sizeof *found);
+		sc = realloc(fscore, (size_t)foundcap * sizeof *fscore);
+		if(f)
+			found = f;
+		if(sc)
+			fscore = sc;
+		if(f == 0 || sc == 0) {
+			foundcap = nfound;
+			walking = 0;
+			return;
+		}
+	}
+	if((n = node_new(0, path, dir)) == 0)
+		return;
+	n->depth = 0;
+	n->idx = nfound;
+	found[nfound++] = n;
+}
+
+static void
+search_start(void)
+{
+	search_free();
+	queue_push(root->name);
+	walking = 1;
+	wstale = 0;
+}
+
+/* the next folder read: what is in it found, its folders to be read
+ * (a link to a folder is not: the walk never loops) */
+static void
+search_dir(void)
+{
+	char name[PATH_MAX_], path[PATH_MAX_ + 2], *dir = queue[qhead++];
+	int kind, isdir;
+
+	if(dir_open(dir)) {
+		while(walking && (kind = dir_entry(name, sizeof name)) != DK_END) {
+			if(strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+				continue;
+			if(name[0] == '.' && !st.phidden)
+				continue;
+			path_join(path, dir, name);
+			isdir = kind == DK_DIR || (kind == DK_OTHER && file_kind(path) == 2);
+			found_add(path, isdir);
+			if(kind == DK_DIR)
+				queue_push(path);
+		}
+		dir_close();
+	}
+	free(dir);
+	if(qhead >= qn)
+		walking = 0;
+}
+
+int
+explorer_busy(void)
+{
+	return st.explorer && root && walking && query.len > 0 && !ask;
+}
+
+void
+explorer_work(void)
+{
+	long t0 = plat_ms();
+
+	while(walking && !term_keyready() && plat_ms() - t0 < SLICE)
+		search_dir();
+	follow = sel > 0 && sel < nrows ? rows[sel] : 0;	/* stays chosen */
+	stale = 1;
+	ui_again = 1;
+}
+
+/* a path found, from the folder shown */
+static const char *
+rel_path(const struct node *n)
+{
+	const char *p = n->name + strlen(root->name);
+
+	while(issep(*p))
+		p++;
+	return p;
+}
+
+/* the better first; then the shorter path; then the nearer, as found */
+static int
+by_score(const void *a, const void *b)
+{
+	const struct node *x = *(struct node *const *)a, *y = *(struct node *const *)b;
+	size_t lx, ly;
+
+	if(fscore[x->idx] != fscore[y->idx])
+		return fscore[x->idx] > fscore[y->idx] ? -1 : 1;
+	lx = strlen(x->name);
+	ly = strlen(y->name);
+	if(lx != ly)
+		return lx < ly ? -1 : 1;
+	return x->idx - y->idx;
+}
+
+/* the rows of the search: what matches, the best first */
+static void
+search_rows(void)
+{
+	const char *r;
+	int i;
+
+	if(wstale)
+		search_start();
+	if(strcmp(lastq, query.s) != 0) {	/* another query: scored again */
+		strcpy(lastq, query.s);
+		scored = 0;
+	}
+	fz_set(query.s);
+	for(; scored < nfound; scored++) {
+		r = rel_path(found[scored]);
+		fscore[scored] = fz_score(r, (int)strlen(r));
+	}
+	for(i = 0; i < nfound; i++)
+		if(fscore[i] >= 0)
+			add_row(found[i], 1);
+	if(nrows > 1)
+		qsort(rows, (size_t)nrows, sizeof *rows, by_score);
+}
+
 /* the row of path, -1 if none */
 static int
 row_of(const char *path)
@@ -299,20 +515,26 @@ rebuild(void)
 	searching = query.len > 0;
 	nrows = 0;
 	if(searching)
-		fz_set(query.s);
-	else if(root->name[rootlen(root->name)] != 0)	/* not at the root: .. */
-		add_row(0, 1);
-	if(!root->loaded)
-		load(root);
-	build(root, searching);
+		search_rows();
+	else {
+		if(root->name[rootlen(root->name)] != 0)	/* not at the root: .. */
+			add_row(0, 1);
+		if(!root->loaded)
+			load(root);
+		build(root, 0);
+	}
 	stale = 0;
 	if(keep[0]) {
 		if((r = row_of(keep)) >= 0)
 			sel = r;
 		keep[0] = 0;
-	} else if(searching)	/* the first that matches */
-		for(sel = 0; sel < nrows && !rmatch[sel]; sel++)
+	} else if(follow) {	/* more found: the one chosen kept */
+		for(r = 0; r < nrows && rows[r] != follow; r++)
 			;
+		sel = r < nrows ? r : 0;
+	} else if(searching)	/* the best */
+		sel = 0;
+	follow = 0;
 	if(sel >= nrows)
 		sel = nrows - 1;
 	if(sel < 0)
@@ -384,16 +606,66 @@ set_root(const char *dir)
 		error("Out of memory", 0);
 		return;
 	}
+	search_free();	/* the search was of the one before */
 	node_free(root);
 	nrows = 0;	/* until made again */
 	hov = -1;
 	root = n;
 	root->open = 1;
-	strcpy(last_root, path);
 	edl_set(&query, "");
 	sel = top = 0;
 	pv_shown[0] = 0;
 	stale = 1;
+}
+
+static void
+hist_push(int w, const char *path)
+{
+	if(nhist[w] == HIST_MAX) {	/* the oldest goes */
+		memmove(hist[w][0], hist[w][1], (HIST_MAX - 1) * sizeof hist[w][0]);
+		nhist[w]--;
+	}
+	strcpy(hist[w][nhist[w]++], path);
+}
+
+/* the folder shown is now dir, as asked (Back comes back); select, if
+ * any, chosen in it: 0 if it cannot be */
+static int
+go_to(const char *dir, const char *select)
+{
+	char was[PATH_MAX_ + 2];
+	struct node *r0 = root;
+
+	strcpy(was, root->name);
+	set_root(dir);
+	if(root == r0)
+		return 0;	/* said why */
+	if(strcmp(root->name, was) != 0) {
+		hist_push(0, was);
+		nhist[1] = 0;
+	}
+	if(select)
+		strcpy(keep, select);
+	return 1;
+}
+
+/* back (0) or forward (1): the folder it comes from chosen, if it is seen */
+static void
+go_hist(int w)
+{
+	char was[PATH_MAX_ + 2], to[PATH_MAX_ + 2];
+	struct node *r0 = root;
+
+	if(nhist[w] == 0)
+		return;
+	strcpy(to, hist[w][--nhist[w]]);
+	strcpy(was, root->name);
+	set_root(to);
+	if(root == r0)
+		return;
+	hist_push(!w, was);
+	reveal(was);	/* where it came from, seen (if in it) */
+	strcpy(keep, was);
 }
 
 /* the folder above the one shown: it is the one chosen there */
@@ -409,8 +681,40 @@ go_up(void)
 	strcpy(up, was);
 	n = (size_t)(path_last(up) - up);
 	up[n] = 0;
-	set_root(up);
-	strcpy(keep, was);
+	go_to(up, was);
+}
+
+/* the project's folder (the current one) */
+static void
+go_project(void)
+{
+	char cwd[PATH_MAX_];
+
+	plat_cwd(cwd, sizeof cwd);
+	go_to(cwd, 0);
+}
+
+/* what was typed ends with a separator: that folder gone into (~ the
+ * home, nothing before it the root), as Open File has it; 1 if it was */
+static int
+typed_folder(void)
+{
+	char name[EDL_MAX], path[PATH_MAX_ + 2];
+	const char *home = getenv("HOME");
+	int n = query.len - 1;
+
+	memcpy(name, query.s, (size_t)n);
+	name[n] = 0;
+	if(n == 0)
+		path[0] = path_sep, path[1] = 0;
+	else if(name[0] == '~' && (name[1] == 0 || issep(name[1])) && home)
+		path_join(path, home, name[1] ? name + 2 : "");
+	else
+		path_join(path, root->name, name);
+	path_normalize(path);
+	if(file_kind(path) != 2)
+		return 0;
+	return go_to(path, 0);
 }
 
 /* the folder shown or what is in it changed: read again, path (if any)
@@ -424,6 +728,8 @@ explorer_changed(void)
 		nrows = 0;	/* their nodes may go: none until made again */
 		hov = -1;
 		reload(root);
+		if(nfound || walking)
+			search_free();	/* the search: looked for again */
 		stale = 1;
 	}
 	pv_shown[0] = 0;
@@ -450,17 +756,16 @@ explorer_open(void)
 	edl_set(&query, "");
 	ask = ASK_NONE;
 	cm = props = 0;
+	/* always from the project's folder (the current one) */
+	nhist[0] = nhist[1] = 0;
+	plat_cwd(cwd, sizeof cwd);
+	node_free(root);
+	root = 0;
+	set_root(cwd);
 	if(root == 0) {
-		if(last_root[0])
-			set_root(last_root);
-		if(root == 0 && st.pdir[0])
-			set_root(st.pdir);
-		if(root == 0) {
-			plat_cwd(cwd, sizeof cwd);
-			set_root(cwd);
-		}
-	} else
-		explorer_changed();
+		st.explorer = 0;
+		return;
+	}
 	ui_steal(ID_P_NAME);
 	ui_again = 1;
 }
@@ -468,6 +773,7 @@ explorer_open(void)
 void
 explorer_close(void)
 {
+	search_free();
 	node_free(root);
 	root = 0;
 	free(rows);
@@ -500,15 +806,20 @@ row_path(int r, char *out)
 	return 1;
 }
 
+static void parent_of(const char *path, char *out);
+
 /* the folder of row r: itself, or the one it is in */
 static void
 row_folder(int r, char *out)
 {
+	char path[PATH_MAX_ + 2];
+
 	if(r >= 0 && r < nrows && rows[r] && rows[r]->dir)
 		node_path(rows[r], out);
-	else if(r >= 0 && r < nrows && rows[r] && rows[r]->up)
-		node_path(rows[r]->up, out);
-	else
+	else if(r >= 0 && r < nrows && rows[r]) {
+		node_path(rows[r], path);
+		parent_of(path, out);
+	} else
 		strcpy(out, root->name);
 }
 
@@ -913,10 +1224,39 @@ do_props(int r)
 	props = 1;
 }
 
-/* a row taken (Enter, a double click, Open): .. up; a folder opened or
- * closed (into it: Open of the menu); a file opened in the editor */
+/* a folder of the tree opened or closed (Right, Left, its arrow) */
 static void
-activate(int r, int into)
+toggle(int r)
+{
+	struct node *n;
+
+	if(r < 0 || r >= nrows || (n = rows[r]) == 0 || !n->dir || n->up == 0)
+		return;
+	n->open = !n->open;
+	stale = 1;
+	node_path(n, keep);
+}
+
+/* one found by the search shown in the tree: the search emptied, the
+ * folders down to it opened */
+static void
+show_in_tree(int r)
+{
+	char path[PATH_MAX_ + 2];
+
+	if(r < 0 || r >= nrows || rows[r] == 0)
+		return;
+	node_path(rows[r], path);
+	edl_set(&query, "");
+	reveal(path);
+	strcpy(keep, path);
+	stale = 1;
+}
+
+/* a row taken (Enter, a double click, Open): .. up; a folder gone into
+ * (the folder shown); a file opened in the editor */
+static void
+activate(int r)
 {
 	char path[PATH_MAX_ + 2];
 	struct node *n;
@@ -929,13 +1269,7 @@ activate(int r, int into)
 	}
 	node_path(n, path);
 	if(n->dir) {
-		if(into)
-			set_root(path);
-		else {
-			n->open = !n->open;
-			stale = 1;
-			strcpy(keep, path);
-		}
+		go_to(path, 0);
 		return;
 	}
 	if(doc_open(path)) {
@@ -944,15 +1278,71 @@ activate(int r, int into)
 	}
 }
 
+static void
+close_all(struct node *n)
+{
+	int i;
+
+	for(i = 0; i < n->nkid; i++)
+		if(n->kid[i]->dir) {
+			n->kid[i]->open = 0;
+			close_all(n->kid[i]);
+		}
+}
+
+/* Collapse All: every folder closed; the one chosen, or the folder of the
+ * folder shown it is in, stays chosen */
+static void
+collapse_all(void)
+{
+	struct node *n = sel < nrows ? rows[sel] : 0;
+
+	if(query.len) {		/* back to the tree */
+		edl_set(&query, "");
+		n = 0;
+	}
+	while(n && n->up && n->up != root)
+		n = n->up;
+	if(n && n->up)
+		node_path(n, keep);
+	close_all(root);
+	stale = 1;
+	pv_shown[0] = 0;
+	ui_again = 1;
+}
+
+/* Set as Project Folder: the folder of row r (-1: the one shown) is the
+ * project's (Open Project Folder, Alt+P, Alt+/ look there) */
+static void
+set_project(int r)
+{
+	char path[PATH_MAX_ + 2];
+
+	if(row_path(r, path) == 0 || file_kind(path) != 2)
+		return;
+	project_set(path);	/* an error is said */
+}
+
+/* the folder shown is the project's */
+static int
+is_project(void)
+{
+	char cwd[PATH_MAX_];
+
+	plat_cwd(cwd, sizeof cwd);
+	return within(cwd, root->name) && within(root->name, cwd);
+}
+
 /* --- the menu (the right button, Shift+F10) ------------------------------ */
 
-enum { C_OPEN, C_NEWDIR, C_S1, C_CUT, C_COPY, C_PASTE, C_S2, C_COPYTO, C_MOVETO,
-	C_RENAME, C_TRASH, C_S3, C_PROPS, C_COUNT };
+enum { C_OPEN, C_PROJECT, C_NEWDIR, C_S1, C_CUT, C_COPY, C_PASTE, C_S2, C_COPYTO, C_MOVETO,
+	C_RENAME, C_TRASH, C_S3, C_COLLAPSE, C_PROPS, C_COUNT };
 static const struct {
 	const char *text, *keys;
 	char accel;
 } cm_items[C_COUNT] = {
 	{ "Open", "Enter", 'O' },
+	{ "Set as Project Folder", "", 'S' },
 	{ "New Folder" DOTS, KEY_ALT "+N", 'N' },
 	{ "-", "", 0 },
 	{ "Cut", KEY_CTRL "+X", 'T' },
@@ -964,6 +1354,7 @@ static const struct {
 	{ "Rename" DOTS, "F2", 'R' },
 	{ "Move to Trash", "Del", 'H' },
 	{ "-", "", 0 },
+	{ "Collapse All", KEY_ALT "+C", 'A' },
 	{ "Properties", KEY_ALT "+Enter", 'I' },
 };
 
@@ -976,11 +1367,14 @@ cm_usable(int i)
 	case C_S1: case C_S2: case C_S3:
 		return 0;
 	case C_NEWDIR:
+	case C_COLLAPSE:
 		return 1;
 	case C_PASTE:
 		return xclip != 0;
 	case C_PROPS:
 		return cm_row < 0 || thing;
+	case C_PROJECT:		/* a folder, or the one shown */
+		return cm_row < 0 || (thing && rows[cm_row]->dir);
 	}
 	return thing;
 }
@@ -1035,7 +1429,8 @@ cm_do(int i)
 	cm = 0;
 	ui_again = 1;
 	switch(i) {
-	case C_OPEN: activate(r, 1); break;
+	case C_OPEN: activate(r); break;
+	case C_PROJECT: set_project(r); break;
 	case C_NEWDIR: ask_begin(ASK_NEWDIR, r); break;
 	case C_CUT: do_clip(r, 1); break;
 	case C_COPY: do_clip(r, 0); break;
@@ -1044,6 +1439,7 @@ cm_do(int i)
 	case C_MOVETO: ask_begin(ASK_MOVETO, r); break;
 	case C_RENAME: ask_begin(ASK_RENAME, r); break;
 	case C_TRASH: do_trash(r); break;
+	case C_COLLAPSE: collapse_all(); break;
 	case C_PROPS: do_props(r); break;
 	}
 }
@@ -1196,6 +1592,39 @@ draw_view(int r, int x1, int y1, int x2, int y2)
 	}
 }
 
+static int
+u8len(int c)
+{
+	return c < 0xC0 ? 1 : c < 0xE0 ? 2 : c < 0xF0 ? 3 : 4;
+}
+
+/* one found by the search: its path from the folder shown, its folders
+ * dim, what the query matched underlined */
+static void
+draw_hit(const struct node *n, int x, int y, int x2, int at)
+{
+	static unsigned char mark[PATH_MAX_];
+	const char *p = rel_path(n);
+	int len = (int)strlen(p), name, j, k, a;
+
+	if(len >= (int)sizeof mark)
+		len = (int)sizeof mark - 1;
+	fz_marks(p, len, mark);
+	name = (int)(path_last(p) - p);
+	if(n->dir)
+		scr_put(x, y, G_SCROLLRIGHT, at | F_DIM);
+	x += 2;
+	for(j = 0; j < len && x <= x2; j += k) {
+		k = u8len((unsigned char)p[j]);
+		if(j + k > len)
+			k = len - j;
+		a = (j < name ? at | F_DIM : at) | (mark[j] ? F_UNDER : 0);
+		x = scr_ntext(x, y, p + j, k, a, x2 + 1);
+	}
+	if(n->dir && x <= x2)
+		scr_put(x, y, path_sep, at);
+}
+
 static void
 draw_row(int r, int x1, int y, int x2, int at)
 {
@@ -1203,16 +1632,18 @@ draw_row(int r, int x1, int y, int x2, int at)
 	struct node *n = rows[r];
 	int x;
 
-	if(n == 0) {
-		scr_text(x1 + 2, y, "..", at, x2 + 1);
-		return;
-	}
-	if(!rmatch[r])	/* the search: only a folder of what matches */
-		at |= F_DIM;
-	if(xclip && xcut) {	/* cut: greyed until pasted */
+	if(n && xclip && xcut) {	/* cut: greyed until pasted */
 		node_path(n, path);
 		if(strcmp(path, xclip) == 0)
 			at |= F_DIM;
+	}
+	if(n && n->up == 0) {	/* found by the search */
+		draw_hit(n, x1, y, x2, at);
+		return;
+	}
+	if(n == 0) {
+		scr_text(x1 + 2, y, "..", at, x2 + 1);
+		return;
 	}
 	x = x1 + n->depth * 2;
 	if(x > x2)
@@ -1228,8 +1659,10 @@ void
 draw_explorer(void)
 {
 	static const char *const hint =
-	    "Enter: open   Right/Left: open/close a folder   F2: rename   Del: Trash   "
-	    "right button: menu";
+	    "Enter: open (a folder: go in)   Right/Left: expand   Backspace: up   "
+	    "Alt+Left/Right: back/forward   right button: menu";
+	static const char *const shint =
+	    "Enter: open (a folder: go in)   Right: show in the tree   Esc: clear the search";
 	static const char *const ask_label[] = { "Search:", "New folder:", "New name:",
 		"Copy to:", "Move to:" };
 	static const char *const ask_hint[] = { "", "Enter: make the folder   Esc: cancel",
@@ -1238,7 +1671,8 @@ draw_explorer(void)
 	int mx = scr_cols >= 60 ? scr_cols / 20 : 0, my = scr_rows >= 20 ? scr_rows / 20 : 0;
 	int w = scr_cols - 2 * mx, h = scr_rows - 2 * my;
 	int x, y, lw = 12, lh, tx2, px1 = 0, i, r, at, lf, inlist, nav, act = -1, hw, cx, bx;
-	int over, view, empty;
+	int over, view, empty, searching, cw;
+	char count[48];
 	struct mouse *ms = &term_mouse;
 	struct edl *field = ask ? &answer : &query;
 	kcode k;
@@ -1276,6 +1710,7 @@ draw_explorer(void)
 	inlist = lf || ui_focus == ID_P_NAME;
 	empty = lf || (ui_focus == ID_P_NAME && !ask && query.len == 0);
 	nav = inlist && !ask;
+	searching = query.len > 0;
 	if(ask && (k == 27 || (k == 13 && ui_focus == ID_P_NAME))) {
 		if(k == 27 || ask_done()) {
 			ask = ASK_NONE;
@@ -1298,8 +1733,19 @@ draw_explorer(void)
 		explorer_changed();
 	} else if(k == K_F5)
 		explorer_changed();
+	else if(!ask && (k == (K_ALT | 'C') || k == (K_ALT | 'c')))
+		collapse_all();
 	else if(!ask && k == (K_ALT | 13))
 		do_props(sel);
+	else if(!ask && k == 27 && searching) {	/* the search emptied first */
+		edl_set(&query, "");
+		stale = 1;
+	} else if(!ask && k == (K_ALT | K_LEFT))
+		go_hist(0);
+	else if(!ask && k == (K_ALT | K_RIGHT))
+		go_hist(1);
+	else if(!ask && k == (K_ALT | K_HOME))
+		go_project();
 	else if(!ask && k == (K_SHIFT | K_F10) && nrows) {
 		cm_open(sel, x + 4 + (rows[sel] ? rows[sel]->depth * 2 : 0),
 		    y + 3 + sel - top + 1);
@@ -1320,14 +1766,18 @@ draw_explorer(void)
 		hov = -1;
 	} else if(nav && empty && (k == K_HOME || k == K_END))
 		sel = k == K_HOME ? 0 : nrows - 1;
-	else if(nav && empty && k == K_RIGHT && sel < nrows && rows[sel] && rows[sel]->dir) {
+	else if(nav && searching && k == K_RIGHT && sel < nrows && rows[sel] &&
+	    (lf || query.cur == query.len))
+		show_in_tree(sel);	/* (in the field: at its end) */
+	else if(nav && empty && !searching && k == K_RIGHT && sel < nrows && rows[sel] &&
+	    rows[sel]->dir) {
 		if(!rows[sel]->open)
-			activate(sel, 0);
+			toggle(sel);
 		else if(sel + 1 < nrows && rows[sel + 1] && rows[sel + 1]->up == rows[sel])
 			sel++;
-	} else if(nav && empty && k == K_LEFT && sel < nrows && rows[sel]) {
+	} else if(nav && empty && !searching && k == K_LEFT && sel < nrows && rows[sel]) {
 		if(rows[sel]->dir && rows[sel]->open)
-			activate(sel, 0);
+			toggle(sel);
 		else if(rows[sel]->up != root)	/* to the folder it is in */
 			for(r = sel - 1; r >= 0; r--)
 				if(rows[r] == rows[sel]->up) {
@@ -1336,7 +1786,7 @@ draw_explorer(void)
 				}
 	} else if(nav && k == 13)
 		act = sel;
-	else if(nav && (k == (K_ALT | K_UP) || (k == 8 && empty)))
+	else if(nav && (k == (K_ALT | K_UP) || (k == 8 && !searching)))
 		go_up();
 	else
 		k = 0;
@@ -1346,12 +1796,28 @@ draw_explorer(void)
 		rebuild();
 
 	scr_text(x + 2, y + 1, "Folder:", S_FLOAT, x + 2 + lw);
-	ui_trunc(x + 2 + lw, y + 1, root->name, S_FLOAT, x + w - 2);
+	i = is_project() ? text_width("  (project)") : 0;
+	r = ui_trunc(x + 2 + lw, y + 1, root->name, S_FLOAT, x + w - 2 - i);
+	if(i)
+		scr_text(r, y + 1, "  (project)", S_FLOAT | F_DIM, x + w - 2);
 	scr_text(x + 2, y + 2, ask_label[ask], S_FLOAT, x + 2 + lw);
+	/* the search: what it found, at the right of the field */
+	count[0] = 0;
+	if(searching && !ask) {
+		udec(count, (pos_t)nrows);
+		strcat(count, walking ? " found, looking..." : wfull ? " found (too many to look at all)" :
+		    " found");
+	}
+	cw = count[0] ? text_width(count) + 1 : 0;
+	if(cw)
+		scr_text(x + w - 2 - cw, y + 2, count, S_FLOAT | F_DIM, x + w - 2);
 	field = ask ? &answer : &query;
-	if(ui_edit(ID_P_NAME, x + 2 + lw, y + 2, w - 4 - lw, field, S_FLOAT) && !ask) {
+	if(ui_edit(ID_P_NAME, x + 2 + lw, y + 2, w - 4 - lw - cw, field, S_FLOAT) && !ask) {
+		if(query.len && issep(query.s[query.len - 1]))
+			typed_folder();	/* name/: into it */
 		stale = 1;
 		rebuild();
+		searching = query.len > 0;
 	}
 
 	/* the tree: the one chosen in sight */
@@ -1396,9 +1862,8 @@ draw_explorer(void)
 			ui_steal(ID_P_LIST);
 			if(ms->clicks == 2)
 				act = i;
-			else if(rows[i] && rows[i]->dir &&
-			    ms->x == x + 2 + rows[i]->depth * 2)	/* its arrow */
-				activate(i, 0);
+			else if(rows[i] && rows[i]->dir && rows[i]->up)
+				toggle(i);	/* a folder of the tree: one click */
 			ui_key = 0;
 		}
 		ui_again = 1;
@@ -1414,8 +1879,8 @@ draw_explorer(void)
 			draw_row(r, x + 2, y + 3 + i, tx2, at);
 	}
 	if(nrows == 0)
-		scr_text(x + 3, y + 3, query.len ? "Nothing matches in the folders open" :
-		    "The folder is empty", S_LIST | F_DIM, tx2);
+		scr_text(x + 3, y + 3, !query.len ? "The folder is empty" : walking ?
+		    "Looking..." : "Nothing matches", S_LIST | F_DIM, tx2);
 	if(px1) {		/* the preview */
 		for(i = 0; i < lh; i++)
 			scr_put(tx2 + 1, y + 3 + i, G_V, S_FLOAT);
@@ -1423,9 +1888,10 @@ draw_explorer(void)
 		view = hov >= 0 && hov < nrows && rows[hov] ? hov : sel;
 		draw_view(view, px1 + 1, y + 3, x + w - 3, y + 3 + lh - 1);
 	}
-	scr_text(x + 2, y + h - 3, ask ? ask_hint[ask] : hint, S_FLOAT | F_DIM, x + w - 2);
-	/* under it, as in Open File: Hidden, [New Folder] [Trash (Del)]; at
-	   the right [Open] [Close] */
+	scr_text(x + 2, y + h - 3, ask ? ask_hint[ask] : query.len ? shint : hint, S_FLOAT | F_DIM,
+	    x + w - 2);
+	/* under it, as in Open File: Hidden, [New Folder] [Trash (Del)]
+	   [Collapse All] (those that fit); at the right [Open] [Close] */
 	hw = text_width("Hidden (Alt+H)") + 5;
 	cx = x + w - 3 - text_width("Close") - 1;
 	bx = cx - 3 - text_width("Open") - 1;
@@ -1439,6 +1905,10 @@ draw_explorer(void)
 		if(ui_button(ID_P_TRASH, x + 2 + hw + 2 + text_width("New Folder") + 4, y + h - 2,
 		    "Trash (Del)", 0, S_FLOAT))
 			do_trash(sel);
+		i = x + 2 + hw + 2 + text_width("New Folder") + 4 + text_width("Trash (Del)") + 4;
+		if(i + text_width("Collapse All") + 2 < bx - 2 &&
+		   ui_button(ID_X_COLLAPSE, i, y + h - 2, "Collapse All", 'C', S_FLOAT) && !ask)
+			collapse_all();
 	}
 	if(bx > x + 2 + hw && ui_button(ID_P_OPEN, bx, y + h - 2, "Open", 0, S_FLOAT) && !ask)
 		act = sel;
@@ -1452,7 +1922,7 @@ draw_explorer(void)
 	if(props)
 		draw_props();
 	if(act >= 0)
-		activate(act, 0);
+		activate(act);
 	if(stale)
 		ui_again = 1;
 }
