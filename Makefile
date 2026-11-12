@@ -57,7 +57,7 @@ CORE = src/core/mem.o src/core/buf.o src/core/enc.o src/core/enc_data.o \
 	src/app/menus.o src/app/status.o src/app/complete.o src/app/finder.o \
 	src/app/walk.o src/app/fuzzy.o src/app/scan.o src/app/jumps.o \
 	src/app/filter.o src/app/lang.o src/app/search.o src/app/dialogs.o \
-	src/app/picker.o src/app/pickfile.o src/app/paths.o src/app/settings.o \
+	src/app/picker.o src/app/pickfile.o src/app/explorer.o src/app/paths.o src/app/settings.o \
 	src/app/syntax.o src/app/langs.o \
 	src/platform/posix/files.o src/platform/posix/run.o \
 	src/platform/posix/thread.o src/platform/colours.o

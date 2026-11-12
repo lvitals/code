@@ -450,7 +450,7 @@ within(const char *path, const char *dir)
 }
 
 /* a folder or a file that is not to go to the Trash: said, and 1 */
-static int
+int
 trash_refused(const char *path)
 {
 	char cwd[PATH_MAX_];

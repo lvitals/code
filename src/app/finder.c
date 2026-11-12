@@ -53,7 +53,7 @@ static int sel, top;
 /* the file previewed */
 static struct buf pv;
 static char pv_inited;
-static int pv_file = -1;
+static char pv_path[PATH_MAX_];	/* its file: "" none */
 static enum { PV_NONE, PV_TEXT, PV_BINARY, PV_UNREAD } pv_kind;
 static int pv_lang;
 static long pv_scroll;		/* lines the wheel moved it, from where it starts */
@@ -252,7 +252,8 @@ finder_open(int m)
 	walk_start(root);
 	st.finder = (char)m;
 	requery();
-	pv_file = pv_sel = -1;
+	pv_path[0] = 0;
+	pv_sel = -1;
 	ui_steal(ID_FINDER);
 }
 
@@ -273,7 +274,8 @@ finder_close(void)
 		buf_free();
 		B = keep;
 	}
-	pv_file = pv_sel = -1;
+	pv_path[0] = 0;
+	pv_sel = -1;
 	st.finder = 0;
 	rows_stale = 1;
 	ui_again = 1;
@@ -300,22 +302,26 @@ open_selected(void)
 
 /* --- the preview --------------------------------------------------------- */
 
+/* the file at path read for the preview (once: kept while it is the
+ * one shown) */
 static void
-preview_load(int file)
+preview_load(const char *path)
 {
-	char path[PATH_MAX_];
 	struct buf *keep = B;
 	pos_t i, n;
+	size_t k = strlen(path);
 
-	if(file == pv_file)
+	if(pv_path[0] && strcmp(path, pv_path) == 0)
 		return;
-	pv_file = file;
+	if(k >= sizeof pv_path)
+		k = sizeof pv_path - 1;
+	memcpy(pv_path, path, k);
+	pv_path[k] = 0;
 	B = &pv;
 	if(!pv_inited) {
 		buf_init();
 		pv_inited = 1;
 	}
-	full_path(file, path, sizeof path);
 	pv_kind = PV_UNREAD;
 	if(buf_load_search(path) == B_OK) {	/* large: mapped, never copied */
 		pv_kind = PV_TEXT;
@@ -371,23 +377,18 @@ preview_line(int x, int y, int x2, pos_t ls, pos_t le, int *lex, int cur)
 	}
 }
 
-/* the file of the result selected, from row y1 to y2: the line of a match
- * in the middle, marked */
+/* the file at path, from row y1 to y2: line (mark: marked) in the middle,
+ * moved *scroll lines by the wheel */
 static void
-draw_preview(int x1, int y1, int x2, int y2)
+preview_show(const char *path, int x1, int y1, int x2, int y2, pos_t line, int mark,
+    long *scroll)
 {
 	struct buf *keep = B;
 	const char *say = 0;
-	pos_t line = 0, first, ls, le, i;
+	pos_t first, ls, le, i;
 	int h = y2 - y1 + 1, row, lex = 0;
 
-	if(nres == 0)
-		return;
-	if(sel != pv_sel) {	/* another result: as it starts */
-		pv_sel = sel;
-		pv_scroll = 0;
-	}
-	preview_load(res[sel].file);
+	preview_load(path);
 	if(pv_kind == PV_BINARY)
 		say = "<Binary file>";
 	else if(pv_kind == PV_UNREAD)
@@ -398,19 +399,17 @@ draw_preview(int x1, int y1, int x2, int y2)
 		return;
 	}
 	B = &pv;
-	if(mode == FINDER_TEXT)
-		line = res[sel].line;
 	first = line > (pos_t)(h / 2) ? line - (pos_t)(h / 2) : 0;
 	/* moved by the wheel: not above the first line, nor further down
 	   than the last one at the bottom (a line past the last starts where
 	   the last does: buf_lineoff) */
-	if(pv_scroll < 0 && (pos_t)-pv_scroll > first)
-		pv_scroll = -(long)first;
-	first += (pos_t)pv_scroll;
-	while(pv_scroll > 0 && h > 1 &&
+	if(*scroll < 0 && (pos_t)-*scroll > first)
+		*scroll = -(long)first;
+	first += (pos_t)*scroll;
+	while(*scroll > 0 && h > 1 &&
 	    buf_lineoff(first + (pos_t)h - 1) == buf_lineoff(first + (pos_t)h - 2)) {
 		first--;
-		pv_scroll--;
+		(*scroll)--;
 	}
 	ls = buf_lineoff(first);
 	/* the state of the lexer there: from the start, if not too far */
@@ -421,13 +420,49 @@ draw_preview(int x1, int y1, int x2, int y2)
 		}
 	for(row = 0; row < h && ls <= buf_len(); row++) {
 		le = buf_lineend(ls);
-		preview_line(x1, y1 + row, x2, ls, le, &lex,
-		    mode == FINDER_TEXT && first + (pos_t)row == line);
+		preview_line(x1, y1 + row, x2, ls, le, &lex, mark && first + (pos_t)row == line);
 		if(le >= buf_len())
 			break;
 		ls = le + 1;
 	}
 	B = keep;
+}
+
+/* the file of the result selected, from row y1 to y2: the line of a match
+ * in the middle, marked */
+static void
+draw_preview(int x1, int y1, int x2, int y2)
+{
+	char path[PATH_MAX_];
+
+	if(nres == 0)
+		return;
+	if(sel != pv_sel) {	/* another result: as it starts */
+		pv_sel = sel;
+		pv_scroll = 0;
+	}
+	full_path(res[sel].file, path, sizeof path);
+	preview_show(path, x1, y1, x2, y2, mode == FINDER_TEXT ? res[sel].line : 0,
+	    mode == FINDER_TEXT, &pv_scroll);
+}
+
+void
+preview_file(const char *path, int x1, int y1, int x2, int y2, long *scroll)
+{
+	preview_show(path, x1, y1, x2, y2, 0, 0, scroll);
+}
+
+void
+preview_forget(void)
+{
+	struct buf *keep = B;
+
+	if(pv_inited && pv_path[0]) {
+		B = &pv;
+		buf_free();
+		B = keep;
+	}
+	pv_path[0] = 0;
 }
 
 /* --- the list ------------------------------------------------------------ */

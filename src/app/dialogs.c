@@ -306,8 +306,11 @@ draw_trash(void)
 	r = msgbox("Move to Trash", msg, 2, MB_YESNO, S_ALERT);
 	if(r < 0)
 		return;
-	if(r == 0)
+	if(r == 0) {
 		picker_trash(st.trash);
+		if(st.explorer)
+			explorer_changed();
+	}
 	mem_free(st.trash);
 	st.trash = 0;
 	ui_steal(ID_P_LIST);

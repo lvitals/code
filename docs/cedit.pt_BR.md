@@ -389,6 +389,58 @@ Não são movidas, com o motivo informado: a pasta do projeto (ou uma
 pasta que a contém), a pasta pessoal, uma pasta com um arquivo aberto
 no editor e um arquivo aberto no editor.
 
+### Explorer (Ctrl+E)
+
+File > Explorer é um gerenciador de arquivos dentro do editor.  Como o
+Open File, mostra a **Folder** (pasta) e uma linha **Search** (busca);
+embaixo delas a pasta é uma árvore, e à direita há uma prévia do arquivo
+sob o mouse (ou, pelo teclado, do escolhido), colorida como no Open File
+in Project (Alt+P).  A prévia de uma pasta lista o que há nela.  A
+rodinha sobre a prévia a rola.
+
+| Tecla, mouse | Ação |
+|---|---|
+| Up, Down, PgUp, PgDn, Home, End | Escolhe |
+| Enter, clique duplo | Pasta: abre ou fecha na árvore; arquivo: abre no editor |
+| Right / Left | Abre a pasta (de novo: vai à primeira entrada) / fecha (de novo: vai à pasta de cima) |
+| Clique na seta | Abre ou fecha a pasta |
+| Backspace, Alt+Up | A pasta de cima (`..` também) |
+| Ctrl+X / Ctrl+C / Ctrl+V | Recortar / Copiar / Colar (na pasta escolhida, ou na pasta do arquivo escolhido) |
+| F2 | Renomear |
+| Del | Mover para a Lixeira (com confirmação) |
+| Alt+N | New Folder (pasta nova) |
+| Alt+Enter | Properties (propriedades) |
+| F5 | Lê as pastas de novo |
+| Alt+H | Mostra os arquivos ocultos |
+| Botão direito, Shift+F10 | O menu daquela entrada (fora das entradas: da pasta mostrada) |
+| Ctrl+E, Esc | Fecha |
+
+O menu tem **Open** (um arquivo no editor; uma pasta passa a ser a
+mostrada), **New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**
+(copiar para), **Move To** (mover para), **Rename** (renomear), **Move
+to Trash** e **Properties**.  O que precisa de um nome o pede na linha
+Search ("New folder:", "New name:", "Copy to:", "Move to:"): Enter
+faz, Esc cancela.  Copy To e Move To começam com a pasta onde a entrada
+está; uma pasta digitada ali recebe a entrada dentro dela, outro nome é
+o novo nome (`~/` é a pasta pessoal; um caminho relativo parte da pasta
+mostrada).
+
+Uma cópia colada onde o nome já existe recebe `nome (copy).ext`,
+`nome (copy 2).ext`, ...  Uma entrada recortada fica acinzentada até ser
+colada (ela é movida, não copiada).  Uma pasta é copiada com tudo o que
+há nela, um link simbólico como link; mover para outro disco é copiar e
+depois remover.  Um documento aberto no editor acompanha o arquivo
+quando ele (ou a pasta dele) é renomeado ou movido.  A pasta do projeto
+e a pasta pessoal não são movidas.
+
+Properties mostra o nome, o tipo, o local, o tamanho (de uma pasta: de
+tudo o que há nela, contado por no máximo dois segundos), a data da
+última alteração, as permissões e o dono.
+
+A busca reduz a árvore aos nomes que combinam (uma busca aproximada,
+como no Alt+P) nas pastas abertas, com as pastas onde estão
+(acinzentadas).
+
 ### Como os arquivos são salvos
 
 Salvar grava um arquivo novo ao lado do antigo e o renomeia por cima
@@ -700,6 +752,7 @@ escape").
 | Ctrl+O | Open File |
 | Alt+O | Open Project Folder |
 | Alt+P | Open File in Project |
+| Ctrl+E | Explorer (gerenciador de arquivos) |
 | Ctrl+S | Save |
 | Ctrl+Shift+S | Save As |
 | Ctrl+W | Close File |

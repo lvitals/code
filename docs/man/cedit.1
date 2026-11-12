@@ -141,6 +141,8 @@ Open File
 Open Project Folder
 .It Ic Alt+P
 Open File in Project
+.It Ic Ctrl+E
+Explorer
 .It Ic Ctrl+S
 Save
 .It Ic Ctrl+Shift+S
@@ -350,6 +352,42 @@ The project folder, the home folder and a folder with a file open in
 the editor are not moved.
 A save writes a new file and renames it over the old one, keeping its
 mode.
+.Ss Explorer
+File > Explorer
+.Pq Ic Ctrl+E
+is a file manager: the Folder and Search lines of Open File, the folder
+as a tree under them, and a preview of the file under the mouse (or
+chosen) at its right.
+.Ic Enter
+opens or closes a folder, or opens a file in the editor;
+.Ic Right
+and
+.Ic Left
+open and close a folder;
+.Ic Backspace
+goes to the folder above;
+.Ic Ctrl+X ,
+.Ic Ctrl+C
+and
+.Ic Ctrl+V
+cut, copy and paste;
+.Ic F2
+renames;
+.Ic Del
+moves to the Trash;
+.Ic Alt+N
+makes a folder;
+.Ic Alt+Enter
+shows the properties;
+.Ic F5
+reads the folders again.
+The right button
+.Pq or Ic Shift+F10
+opens a menu: Open, New Folder, Cut, Copy, Paste, Copy To, Move To,
+Rename, Move to Trash, Properties.
+A name is asked for in the Search line (Enter does it, Esc does not).
+A document open in the editor follows its file when it is renamed or
+moved.
 .Sh THE PROJECT
 The project folder is the
 .Ar dir

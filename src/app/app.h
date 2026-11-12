@@ -24,7 +24,7 @@ enum {
 	A_ZOOMIN, A_ZOOMOUT, A_ZOOMRESET, A_MATCHBR, A_BSINDENT, A_GUIDES,
 	A_ABOUT, A_FINDNEXT, A_COMPLETE, A_GOMATCH, A_EXPAND, A_SHRINK,
 	A_BACK, A_FORWARD, A_FILTER, A_MCNEXT, A_MCUP, A_MCDOWN, A_ENCODING,
-	A_FINDFILE, A_FINDTEXT, A_OPENFOLDER
+	A_FINDFILE, A_FINDTEXT, A_OPENFOLDER, A_EXPLORER
 };
 
 /* a cursor besides the document's own (Alt+Click, Ctrl+D) */
@@ -98,6 +98,7 @@ struct state {
 	char enc_dialog;	/* the list of the encodings: ENCD_REOPEN, ENCD_CONVERT */
 	struct edl enc_needle;	/* what it is narrowed to (Find:) */
 	char finder;		/* the project finder: FINDER_FILES, FINDER_TEXT */
+	char explorer;		/* File > Explorer is open */
 	char wants_reload;	/* the file changed on the disk: read it again? */
 	struct edl gototarget;
 	char goto_invalid;
@@ -217,6 +218,16 @@ void finder_close(void);
 void draw_finder(void);
 int finder_busy(void);		/* work to do while idle */
 void finder_work(void);		/* some of it, until a key waits */
+/* the preview of a file, as the finder has it, from (x1, y1) to (x2, y2);
+ * *scroll: lines the wheel moved it */
+void preview_file(const char *path, int x1, int y1, int x2, int y2, long *scroll);
+void preview_forget(void);	/* the file it read, let go */
+
+/* explorer.c: File > Explorer (Ctrl+E), a file manager */
+void explorer_open(void);
+void explorer_close(void);
+void draw_explorer(void);
+void explorer_changed(void);	/* what it shows changed: read again */
 
 /* jumps.c: the places the cursor jumped from (Alt+Left, Alt+Right) */
 void jump_push(void);		/* before a jump: where the cursor is */
@@ -294,5 +305,8 @@ void picker_open(int kind);
 void close_picker(void);
 void picker_finish(const char *path);
 void picker_trash(const char *path);	/* picker.c: Yes to draw_trash */
+/* not to go to the Trash (the project's folder, the home, a file open is
+ * in it): said, 1 */
+int trash_refused(const char *path);
 
 #endif

@@ -145,6 +145,8 @@ Open File (abrir arquivo)
 Open Project Folder (escolher a pasta do projeto)
 .It Ic Alt+P
 Open File in Project (abrir arquivo do projeto)
+.It Ic Ctrl+E
+Explorer (gerenciador de arquivos)
 .It Ic Ctrl+S
 Save (salvar)
 .It Ic Ctrl+Shift+S
@@ -355,6 +357,42 @@ A pasta do projeto, a pasta pessoal e uma pasta com um arquivo aberto
 no editor não são movidas.
 Salvar grava um arquivo novo e o renomeia por cima do antigo, mantendo
 as permissões.
+.Ss Explorer
+File > Explorer
+.Pq Ic Ctrl+E
+é um gerenciador de arquivos: as linhas Folder e Search do Open File, a
+pasta como árvore embaixo delas e, à direita, uma prévia do arquivo sob
+o mouse (ou escolhido).
+.Ic Enter
+abre ou fecha uma pasta, ou abre um arquivo no editor;
+.Ic Right
+e
+.Ic Left
+abrem e fecham uma pasta;
+.Ic Backspace
+vai à pasta de cima;
+.Ic Ctrl+X ,
+.Ic Ctrl+C
+e
+.Ic Ctrl+V
+recortam, copiam e colam;
+.Ic F2
+renomeia;
+.Ic Del
+move para a Lixeira;
+.Ic Alt+N
+cria uma pasta;
+.Ic Alt+Enter
+mostra as propriedades;
+.Ic F5
+lê as pastas de novo.
+O botão direito
+.Pq ou Ic Shift+F10
+abre um menu: Open, New Folder, Cut, Copy, Paste, Copy To, Move To,
+Rename, Move to Trash, Properties.
+Um nome é pedido na linha Search (Enter faz, Esc cancela).
+Um documento aberto no editor acompanha o arquivo quando ele é
+renomeado ou movido.
 .Sh O PROJETO
 A pasta do projeto é a
 .Ar pasta

@@ -21,6 +21,7 @@ static const struct item file_items[] = {
 	{ "Open File" DOTS, 'O', 0, A_OPEN, C("O") },
 	{ "Open Project Folder" DOTS, 'F', 0, A_OPENFOLDER, KEY_ALT "+O" },
 	{ "Open File in Project" DOTS, 'I', 0, A_FINDFILE, KEY_ALT "+P" },
+	{ "Explorer" DOTS, 'L', 0, A_EXPLORER, C("E") },
 	SEP,
 	{ "Save", 'S', 1, A_SAVE, C("S") },
 	{ "Save As" DOTS, 'A', 1, A_SAVEAS, "" },

@@ -388,6 +388,57 @@ Not moved, with the reason shown: the project folder (or a folder that
 contains it), the home folder, a folder with a file open in the
 editor, and a file open in the editor.
 
+### Explorer (Ctrl+E)
+
+File > Explorer is a file manager inside the editor.  Like Open File it
+shows the **Folder** and a **Search** line; under them the folder is a
+tree, and at its right a preview of the file under the mouse (or, with
+the keyboard, of the one chosen), highlighted as in Open File in Project
+(Alt+P).  A folder's preview lists what is in it.  The wheel over the
+preview scrolls it.
+
+| Key, mouse | Action |
+|---|---|
+| Up, Down, PgUp, PgDn, Home, End | Choose |
+| Enter, double click | A folder: open or close it in the tree; a file: open it in the editor |
+| Right / Left | Open a folder (again: to its first entry) / close it (again: to its parent) |
+| Click on the arrow | Open or close the folder |
+| Backspace, Alt+Up | The folder above (`..` too) |
+| Ctrl+X / Ctrl+C / Ctrl+V | Cut / Copy / Paste (into the folder chosen, or the one the file chosen is in) |
+| F2 | Rename |
+| Del | Move to Trash (asked first) |
+| Alt+N | New Folder |
+| Alt+Enter | Properties |
+| F5 | Read the folders again |
+| Alt+H | Show the hidden files |
+| Right button, Shift+F10 | The menu of that entry (on no entry: of the folder shown) |
+| Ctrl+E, Esc | Close |
+
+The menu has **Open** (a file in the editor; a folder becomes the one
+shown), **New Folder**, **Cut**, **Copy**, **Paste**, **Copy To**,
+**Move To**, **Rename**, **Move to Trash** and **Properties**.  What
+needs a name asks for it in the Search line ("New folder:", "New
+name:", "Copy to:", "Move to:"): Enter does it, Esc does not.  Copy To
+and Move To start with the folder the entry is in; a folder typed there
+takes the entry inside it, another name is the new name (`~/` is the
+home; a relative path is from the folder shown).
+
+A copy pasted where its name is taken is named `name (copy).ext`,
+`name (copy 2).ext`, ...  A cut entry is greyed until it is pasted (it
+is moved, not copied).  A folder is copied with all that is in it, a
+symbolic link as a link; a move to another disk is a copy and then a
+removal.  A document open in the editor follows its file when it (or
+its folder) is renamed or moved.  The project folder and the home
+folder are not moved.
+
+Properties shows the name, the kind, the location, the size (of a
+folder: of all that is in it, counted for at most two seconds), the
+date of the last change, the permissions and the owner.
+
+The search narrows the tree to the names that match (a fuzzy match, as
+Alt+P has it) in the folders that are open, with the folders they are
+in (greyed).
+
 ### How files are saved
 
 A save writes a new file next to the old one and renames it over it,
@@ -695,6 +746,7 @@ enabled ("meta sends escape").
 | Ctrl+O | Open File |
 | Alt+O | Open Project Folder |
 | Alt+P | Open File in Project |
+| Ctrl+E | Explorer |
 | Ctrl+S | Save |
 | Ctrl+Shift+S | Save As |
 | Ctrl+W | Close File |

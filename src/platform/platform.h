@@ -81,6 +81,7 @@ typedef long rune;
 #define K_F1		(K_FIRST + 16)
 #define K_F2		(K_FIRST + 17)
 #define K_F4		(K_FIRST + 18)
+#define K_F5		(K_FIRST + 19)
 #define K_MODS		(K_SHIFT | K_CTRL | K_ALT)
 
 /* the mouse of the last K_MOUSE */
@@ -185,6 +186,27 @@ const char *dir_make(const char *path);
  * Trash: the one the file managers show, and restore from): 0, or why it
  * was not moved */
 const char *plat_trash(const char *path);
+/* a file or a folder (all that is in it) copied to to, a name that is
+ * free; a link copied as a link: 0, or why not (what was made of to is
+ * taken away) */
+const char *plat_copy(const char *from, const char *to);
+/* moved (or renamed) to to, a name that is free; to another file system,
+ * copied and then removed: 0, or why not */
+const char *plat_move(const char *from, const char *to);
+/* what File > Explorer > Properties shows of a file or a folder */
+struct file_info {
+	int kind;		/* 1 file, 2 folder, 3 another kind (a device ...) */
+	int link;		/* a symbolic link: the rest is of what it points to */
+	pos_t size;
+	char mode[12];		/* as ls has it: drwxr-xr-x */
+	char owner[40];		/* user:group */
+	char modified[32];	/* 2026-11-12 10:30:00, local time */
+	char target[1024];	/* of a link */
+};
+int file_info(const char *path, struct file_info *fi);	/* 0 if none */
+/* what is in a folder, all the way down (links not followed): 0 when it
+ * stopped after ms milliseconds, the counts so far */
+int dir_usage(const char *path, pos_t *files, pos_t *dirs, pos_t *bytes, int ms);
 extern const char path_sep;		/* '/' or '\\' */
 /* the drives (bit 0 is A:), when the root has a parent: the list of them */
 unsigned plat_drives(void);

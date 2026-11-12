@@ -113,6 +113,10 @@ icon.  The settings are in `~/.config/cedit/settings.json`, for both.
   is looked for in both cases with `memchr`, not byte by byte.
 - Go to Line:Column (Ctrl+G), Go to File (Ctrl+P, with more than one
   document open).
+- Explorer (Ctrl+E): a file manager in the editor.  The folder as a
+  tree, a preview of the file under the mouse (as Alt+P has it), and a
+  menu on the right button: Open, New Folder, Cut, Copy, Paste, Copy To,
+  Move To, Rename (F2), Move to Trash (Del), Properties (Alt+Enter).
 - Open File (as Open Project Folder): the folder, a Search line and the
   entries (.., the directories, the files).  Typing narrows them (a
   fuzzy match, as Alt+P has it), Up and Down choose, Enter goes into a

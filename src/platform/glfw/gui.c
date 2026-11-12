@@ -176,6 +176,7 @@ key_cb(GLFWwindow *w, int key, int scancode, int action, int m)
 	case GLFW_KEY_F2: k = K_F2; break;
 	case GLFW_KEY_F3: k = K_F3; break;
 	case GLFW_KEY_F4: k = K_F4; break;
+	case GLFW_KEY_F5: k = K_F5; break;
 	case GLFW_KEY_F10: k = K_F10; break;
 	}
 	if(k) {

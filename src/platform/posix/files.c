@@ -8,7 +8,10 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ftw.h>
+#include <grp.h>
 #include <limits.h>
+#include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -825,4 +828,234 @@ unsigned
 plat_drives(void)
 {
 	return 0;
+}
+
+/* --- copy, move, properties (File > Explorer) ----------------------------- */
+
+/* a regular file's bytes to to (made, O_EXCL), with its permissions */
+static const char *
+copy_file(const char *from, const char *to, mode_t mode)
+{
+	static char b[65536];
+	const char *why = 0;
+	ssize_t n, w, k;
+	int f, t;
+
+	if((f = open(from, O_RDONLY)) < 0)
+		return strerror(errno);
+	if((t = open(to, O_WRONLY | O_CREAT | O_EXCL, mode & 07777)) < 0) {
+		why = strerror(errno);
+		close(f);
+		return why;
+	}
+	for(;;) {
+		n = read(f, b, sizeof b);
+		if(n < 0 && errno == EINTR)
+			continue;
+		if(n < 0)
+			why = strerror(errno);
+		if(n <= 0)
+			break;
+		for(w = 0; w < n && !why; w += k)
+			if((k = write(t, b + w, (size_t)(n - w))) < 0) {
+				if(errno == EINTR)
+					k = 0;
+				else
+					why = strerror(errno);
+			}
+		if(why)
+			break;
+	}
+	close(f);
+	if(close(t) < 0 && !why)
+		why = strerror(errno);
+	if(why)
+		unlink(to);
+	return why;
+}
+
+static const char *
+copy_tree(const char *from, const char *to, int depth)
+{
+	struct stat s;
+	struct dirent *e;
+	const char *why = 0;
+	char link[4096], *a, *b;
+	size_t fa = strlen(from), ta = strlen(to), k;
+	ssize_t n;
+	DIR *d;
+
+	if(depth > 200)
+		return "The folders go too deep";
+	if(lstat(from, &s) < 0)
+		return strerror(errno);
+	if(S_ISLNK(s.st_mode)) {
+		if((n = readlink(from, link, sizeof link - 1)) < 0)
+			return strerror(errno);
+		link[n] = 0;
+		return symlink(link, to) == 0 ? 0 : strerror(errno);
+	}
+	if(S_ISREG(s.st_mode))
+		return copy_file(from, to, s.st_mode);
+	if(!S_ISDIR(s.st_mode))
+		return "Not a file nor a folder";
+	if(mkdir(to, (s.st_mode & 07777) | 0700) < 0)
+		return strerror(errno);
+	if((d = opendir(from)) == 0)
+		return strerror(errno);
+	while(!why && (e = readdir(d)) != 0) {
+		if(strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0)
+			continue;
+		k = strlen(e->d_name);
+		a = malloc(fa + k + 2);
+		b = malloc(ta + k + 2);
+		if(a == 0 || b == 0)
+			why = "Out of memory";
+		else {
+			sprintf(a, "%s/%s", from, e->d_name);
+			sprintf(b, "%s/%s", to, e->d_name);
+			why = copy_tree(a, b, depth + 1);
+		}
+		free(a);
+		free(b);
+	}
+	closedir(d);
+	if(!why)
+		chmod(to, s.st_mode & 07777);	/* as it was: writable while made */
+	return why;
+}
+
+static int
+remove_one(const char *path, const struct stat *s, int flag, struct FTW *f)
+{
+	(void)s;
+	(void)flag;
+	(void)f;
+	return remove(path) == 0 ? 0 : -1;
+}
+
+/* path and all that is in it, removed: 0 if all of it went */
+static int
+remove_tree(const char *path)
+{
+	return nftw(path, remove_one, 16, FTW_DEPTH | FTW_PHYS) == 0;
+}
+
+static int
+taken(const char *path)
+{
+	struct stat s;
+
+	return lstat(path, &s) == 0 || errno != ENOENT;
+}
+
+const char *
+plat_copy(const char *from, const char *to)
+{
+	const char *why;
+
+	if(taken(to))
+		return "The name is taken";
+	if((why = copy_tree(from, to, 0)) != 0 && taken(to))
+		remove_tree(to);	/* made here: none of it is kept */
+	return why;
+}
+
+const char *
+plat_move(const char *from, const char *to)
+{
+	const char *why;
+
+	if(taken(to))
+		return "The name is taken";
+	if(rename(from, to) == 0)
+		return 0;
+	if(errno != EXDEV)
+		return strerror(errno);
+	/* another file system: a copy, then the first removed */
+	if((why = plat_copy(from, to)) != 0)
+		return why;
+	if(!remove_tree(from))
+		return "Copied, but the first could not be removed all";
+	return 0;
+}
+
+int
+file_info(const char *path, struct file_info *fi)
+{
+	static const char rwx[] = "rwxrwxrwx";
+	struct stat s;
+	struct passwd *pw;
+	struct group *gr;
+	struct tm tm;
+	ssize_t n;
+	int i;
+
+	memset(fi, 0, sizeof *fi);
+	if(lstat(path, &s) < 0)
+		return 0;
+	if(S_ISLNK(s.st_mode)) {
+		fi->link = 1;
+		if((n = readlink(path, fi->target, sizeof fi->target - 1)) > 0)
+			fi->target[n] = 0;
+		if(stat(path, &s) < 0) {	/* it points to nothing */
+			fi->kind = 3;
+			strcpy(fi->mode, "l?????????");
+			return 1;
+		}
+	}
+	fi->kind = S_ISDIR(s.st_mode) ? 2 : S_ISREG(s.st_mode) ? 1 : 3;
+	fi->size = (pos_t)s.st_size;
+	fi->mode[0] = fi->link ? 'l' : S_ISDIR(s.st_mode) ? 'd' : S_ISREG(s.st_mode) ? '-' :
+	    S_ISCHR(s.st_mode) ? 'c' : S_ISBLK(s.st_mode) ? 'b' : S_ISFIFO(s.st_mode) ? 'p' :
+	    S_ISSOCK(s.st_mode) ? 's' : '?';
+	for(i = 0; i < 9; i++)
+		fi->mode[1 + i] = s.st_mode & (0400 >> i) ? rwx[i] : '-';
+	fi->mode[10] = 0;
+	if((pw = getpwuid(s.st_uid)) != 0)
+		snprintf(fi->owner, sizeof fi->owner, "%.19s", pw->pw_name);
+	else
+		snprintf(fi->owner, sizeof fi->owner, "%lu", (unsigned long)s.st_uid);
+	n = (ssize_t)strlen(fi->owner);
+	if((gr = getgrgid(s.st_gid)) != 0)
+		snprintf(fi->owner + n, sizeof fi->owner - (size_t)n, ":%.18s", gr->gr_name);
+	else
+		snprintf(fi->owner + n, sizeof fi->owner - (size_t)n, ":%lu", (unsigned long)s.st_gid);
+	if(localtime_r(&s.st_mtime, &tm))
+		strftime(fi->modified, sizeof fi->modified, "%Y-%m-%d %H:%M:%S", &tm);
+	return 1;
+}
+
+static pos_t du_files, du_dirs, du_bytes;
+static long du_end;
+
+static int
+count_one(const char *path, const struct stat *s, int flag, struct FTW *f)
+{
+	(void)path;
+	if(f->level == 0)
+		return 0;	/* the folder itself */
+	if(flag == FTW_D || flag == FTW_DNR)
+		du_dirs++;
+	else {
+		du_files++;
+		if(flag == FTW_F)
+			du_bytes += (pos_t)s->st_size;
+	}
+	/* now and then: the time it may take */
+	return (du_files + du_dirs) % 1024 == 0 && plat_ms() > du_end ? 1 : 0;
+}
+
+int
+dir_usage(const char *path, pos_t *files, pos_t *dirs, pos_t *bytes, int ms)
+{
+	int r;
+
+	du_files = du_dirs = du_bytes = 0;
+	du_end = plat_ms() + ms;
+	r = nftw(path, count_one, 16, FTW_PHYS);
+	*files = du_files;
+	*dirs = du_dirs;
+	*bytes = du_bytes;
+	return r != 1;
 }

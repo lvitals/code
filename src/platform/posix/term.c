@@ -580,6 +580,7 @@ csi(void)
 	case 'D': return K_LEFT | mods(p[1]);
 	case 'H': return K_HOME | mods(p[1]);
 	case 'F': return K_END | mods(p[1]);
+	case 'Q': return K_F2 | mods(p[1]);
 	case 'R': return K_F3 | mods(p[1]);
 	case 'Z': return K_SHIFT | 9;
 	case 'u':	/* CSI code ; mods u */
@@ -598,7 +599,9 @@ csi(void)
 	case 3: return K_DEL | mods(p[1]);
 	case 5: return K_PGUP | mods(p[1]);
 	case 6: return K_PGDN | mods(p[1]);
+	case 12: return K_F2 | mods(p[1]);
 	case 13: return K_F3 | mods(p[1]);
+	case 15: return K_F5 | mods(p[1]);
 	case 21: return K_F10 | mods(p[1]);
 	case 200: return read_paste();
 	case 27:	/* modifyOtherKeys: 27 ; mods ; code */
@@ -694,6 +697,7 @@ term_key(void)
 		case 'D': return K_LEFT;
 		case 'H': return K_HOME;
 		case 'F': return K_END;
+		case 'Q': return K_F2;
 		case 'R': return K_F3;
 		}
 		return K_NONE;

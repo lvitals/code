@@ -433,6 +433,9 @@ app_action(int a)
 	case A_OPENFOLDER:
 		picker_open(PICK_FOLDER);
 		return;
+	case A_EXPLORER:
+		explorer_open();
+		return;
 	case A_EXIT:
 		st.wants_exit = 1;
 		return;
@@ -571,6 +574,7 @@ shortcut(kcode k)
 	case K_CTRL | '0': return A_ZOOMRESET;
 	case K_ALT | 'J': return A_JUMPMARK;
 	case K_ALT | 'O': return A_OPENFOLDER;
+	case K_CTRL | 'E': return A_EXPLORER;
 	case K_ALT | 'P': return A_FINDFILE;
 	case K_ALT | '/': return A_FINDTEXT;
 	case K_ALT | '|': case K_ALT | K_SHIFT | '|': case K_ALT | K_SHIFT | '\\':
@@ -588,7 +592,7 @@ static int
 modal_open(void)
 {
 	return st.wants_close || st.wants_goto || st.picker || st.wants_gotofile ||
-	    st.wants_about || st.wants_filter || st.wants_reload || st.finder || st.enc_dialog || st.nerr;
+	    st.wants_about || st.wants_filter || st.wants_reload || st.finder || st.enc_dialog || st.explorer || st.nerr;
 }
 
 
@@ -673,6 +677,8 @@ draw(kcode key)
 		draw_reload();
 	if(st.picker)
 		draw_picker();
+	if(st.explorer)
+		draw_explorer();
 	if(st.overwrite)
 		draw_overwrite();
 	if(st.trash)
@@ -770,7 +776,7 @@ main(int argc, char **argv)
 			   onto a button or off one (its hover) */
 			key = term_key();
 		while(key == K_MOUSE && term_mouse.kind == M_MOVE && st.menu < 0 &&
-		    !ui_hover_moved(term_mouse.x, term_mouse.y));
+		    !st.explorer && !ui_hover_moved(term_mouse.x, term_mouse.y));
 		if(key == K_RESIZE) {	/* a new size: all of it drawn again */
 			if(term_size(&cols, &rows) && !scr_init(cols, rows))
 				break;
