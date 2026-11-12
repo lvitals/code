@@ -10,7 +10,14 @@
  *
  * The 8-bit decoders give each byte a character (the five bytes
  * Windows-1252 leaves out are the C1 controls), so a file read and
- * written back is the same bytes. */
+ * written back is the same bytes.
+ *
+ * Those seven are the editor's own.  The others of the list (UTF-16 and
+ * UTF-32 with a BOM, UTF-7, the ISO-8859 family, the code pages of
+ * Windows, IBM and the Mac, Shift_JIS, EUC-JP, GB18030, Big5, EUC-KR,
+ * ISO-2022-JP, HZ, ...) are converted here too: from the tables of
+ * enc_data.c (made once from glibc, kept in the sources: no library is
+ * needed), or computed.  They are never guessed: they are chosen. */
 #ifndef ENC_H
 #define ENC_H
 
@@ -19,14 +26,26 @@
 enum {
 	ENC_UTF8, ENC_UTF8_BOM, ENC_UTF16LE, ENC_UTF16BE,
 	ENC_CP1252, ENC_LATIN1, ENC_LATIN9,
-	ENC_N,
+	ENC_N,			/* the editor's own; from here, the others */
 	ENC_AUTO = -1		/* buf_load: guessed */
 };
 
-extern const char *const enc_names[ENC_N];
-
-#define ENC_8BIT(e)	((e) >= ENC_CP1252)
+#define ENC_EXT(e)	((e) >= ENC_N)
+#define ENC_8BIT(e)	((e) >= ENC_CP1252 && (e) < ENC_N)
 #define ENC_UTF16(e)	((e) == ENC_UTF16LE || (e) == ENC_UTF16BE)
+
+/* the name of e, as the status bar shows it */
+const char *enc_name(int e);
+/* the encoding of a name (enc_name's): ENC_AUTO if none */
+int enc_find(const char *name);
+/* the n bytes p (the start of a file, not UTF-8): the encoding they are
+ * in, from the characters each would give (Japanese, Chinese, Korean,
+ * Cyrillic); ENC_AUTO: none of those (an 8-bit one of the West) */
+int enc_detect(const char *p, pos_t n);
+/* the encodings that can be chosen, in the order of the list: their
+ * count, max at most to ids */
+int enc_list(int *ids, int max);
+#define ENC_LIST_MAX	160
 
 /* the BOM of e (0 bytes for those without one) */
 int enc_bom(int e, const char **bom);
@@ -50,12 +69,17 @@ int u8_check(struct u8check *c, const char *p, pos_t n, int last);
 /* a decoder: the bytes of a file to UTF-8, a piece at a time */
 struct dec {
 	int enc;
-	unsigned char pend[2];	/* UTF-16: the byte of a pair cut short */
+	unsigned char pend[8];	/* a character cut short (UTF-16: a byte) */
 	int npend;
+	int st;			/* the others: their state (a mode, a BOM) */
+	unsigned long acc;	/* UTF-7: the bits of base64 */
+	int nbits;
 	unsigned long hi;	/* UTF-16: a high surrogate, waiting */
 	int c1;			/* 8-bit: a byte in 80h-9Fh was seen */
+	long bad;		/* the bytes that are none in it (U+FFFD) */
 };
-/* out holds 3 * n + 8 bytes: what it got, its length; last: the end */
+/* out holds DEC_ROOM(n) bytes: what it got, its length; last: the end */
+#define DEC_ROOM(n)	(3 * (n) + 32)
 pos_t dec_run(struct dec *d, const char *in, pos_t n, char *out, int last);
 
 /* an encoder: UTF-8 to the bytes of a file, a piece at a time (valid
@@ -64,9 +88,17 @@ struct encd {
 	int enc;
 	unsigned char pend[4];	/* a character cut short */
 	int npend;
+	int st;			/* the others: their state (a mode, the BOM
+				   written) */
+	unsigned long acc;	/* UTF-7: the bits of base64; ISO-2022-KR:
+				   its header written */
+	int nbits;
 };
 /* out holds 4 * n + 8 bytes: what it got, its length */
 pos_t enc_run(struct encd *e, const char *in, pos_t n, char *out);
+/* the end: what a stateful one (ISO-2022-JP, UTF-7, HZ) still has to
+ * write (16 bytes at most), its length */
+pos_t enc_end(struct encd *e, char *out);
 /* c can be written in e */
 int enc_has(int e, unsigned long c);
 

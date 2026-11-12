@@ -145,7 +145,7 @@ From left to right, as far as the width allows:
 |---|---|---|
 | Language | The language of the document, for highlighting | |
 | LF / CRLF | The line endings | Switch between them |
-| Encoding | UTF-8, UTF-16 LE, Windows-1252, … | Opens the encoding list (section 10) |
+| Encoding | UTF-8, UTF-16LE, windows-1252, … | Opens Reopen with encoding and Convert to encoding (section 10) |
 | Indentation | Tabs, or spaces and how many, as guessed from the file | Change it |
 | Line:Column | The cursor's position | |
 | OVR | Overtype mode is on (Insert key) | Turn it off |
@@ -483,9 +483,14 @@ editor's own C99 code.
 ## 10. Encodings and line endings
 
 The text is UTF-8 inside the editor.  A file in another encoding is
-decoded when it is read and encoded again when it is saved.  Supported
-encodings: UTF-8, UTF-8 with BOM, UTF-16 LE, UTF-16 BE, Windows-1252,
-ISO-8859-1 and ISO-8859-15.
+decoded when it is read and encoded again when it is saved.  The editor
+converts seven encodings itself: UTF-8, UTF-8 with BOM, UTF-16 LE,
+UTF-16 BE, Windows-1252, ISO-8859-1 and ISO-8859-15.  The rest of the list
+(UTF-16 and UTF-32 with a BOM, UTF-7, the other ISO-8859 encodings, the
+code pages of Windows, IBM and the Mac, KOI8, Shift_JIS, EUC-JP,
+ISO-2022-JP, HZ, GB18030, GBK, Big5, EUC-KR, …) is converted by the
+editor too, from tables kept in its sources (`src/core/enc_data.c`): no
+library is needed.  Those are never detected: they can only be chosen.
 
 How the encoding is detected when a file is opened:
 
@@ -494,18 +499,30 @@ How the encoding is detected when a file is opened:
    it is saved without a BOM;
 3. otherwise UTF-8, if the bytes are valid UTF-8 (for a file of 32 MB or
    more, its first 64 KB are checked);
-4. otherwise Windows-1252, or ISO-8859-1 when no byte is in the range
+4. otherwise, from its first 64 KB, Japanese (Shift_JIS, EUC-JP),
+   Chinese (GB18030, Big5), Korean (EUC-KR) or Cyrillic (windows-1251,
+   KOI8-R, IBM866): the bytes must be valid in it, and the characters
+   they give must be those its language uses most (kana, the most
+   frequent hanzi or hangul, the most frequent Russian letters).  A text
+   of a few characters may be missed;
+5. otherwise Windows-1252, or ISO-8859-1 when no byte is in the range
    80h–9Fh.  ISO-8859-15 is never guessed; it can only be chosen.
 
 A file opened and saved without changes is written back byte for byte
 in any encoding.
 
 The encoding is shown in the status bar.  Its button, or File >
-Encoding…, opens a list with two actions:
+Encoding…, opens a popup with two actions:
 
-- **Save with**: the next save writes that encoding;
-- **Reopen with**: reads the file again in that encoding (only when
-  there are no unsaved changes).
+- **Reopen with encoding…**: reads the file again in the encoding
+  chosen (only when there are no unsaved changes);
+- **Convert to encoding…**: keeps the text, and the next save writes
+  the encoding chosen.
+
+Each opens the list of the encodings, with the current one chosen.
+Typing in **Find:** narrows it (a fuzzy match, as in Alt+P); the arrows
+choose, and Enter or a double click applies; Esc closes it.  An untitled
+document has nothing to read again: its list opens at once, to convert.
 
 If the text has a character that an 8-bit encoding cannot represent,
 the save writes nothing: the character is selected and its line is

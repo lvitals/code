@@ -25,7 +25,9 @@ make clean
 ```
 
 `cedit` needs a C99 compiler and a POSIX system (termios, dirent, poll,
-pthreads: `-pthread`, which alefc takes too);
+pthreads: `-pthread`, which alefc takes too), and nothing else: the
+tables of the encodings are in the sources (`src/core/enc_data.c`, made
+once from glibc's iconv by `make enc-tables`);
 `xcedit` also GLFW 3 and OpenGL (stb_truetype, which draws the
 characters, is in the sources: `src/platform/glfw/stb_truetype.h`).  The
 Makefile is a POSIX make's: the `make` of each system builds it.

@@ -407,7 +407,7 @@ search_file(struct worker *w, const char *path, unsigned g, int enc)
 			r = F_NOT_UTF8;
 			break;
 		}
-		if(!room(w, w->len + 3 * (size_t)n + 8)) {
+		if(!room(w, w->len + (size_t)DEC_ROOM(n))) {
 			r = F_DROPPED;
 			break;
 		}
@@ -424,7 +424,7 @@ search_file(struct worker *w, const char *path, unsigned g, int enc)
 	if(r == F_DONE && check && !u8_check(&u, "", 0, 1))
 		r = F_NOT_UTF8;	/* a character cut at the end */
 	if(r == F_DONE) {	/* the end: what is left */
-		if(d.enc != ENC_UTF8 && room(w, w->len + 16))
+		if(d.enc != ENC_UTF8 && room(w, w->len + (size_t)DEC_ROOM(0)))
 			w->len += (size_t)dec_run(&d, "", 0, w->text + w->len, 1);
 		if(!search_text(w, &line, 1, g))
 			r = F_DROPPED;

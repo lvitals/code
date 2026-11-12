@@ -150,7 +150,7 @@ Da esquerda para a direita, conforme a largura permite:
 |---|---|---|
 | Linguagem | A linguagem do documento, para o realce | |
 | LF / CRLF | O fim de linha | Alterna entre os dois |
-| Codificação | UTF-8, UTF-16 LE, Windows-1252, … | Abre a lista de codificações (seção 10) |
+| Codificação | UTF-8, UTF-16LE, windows-1252, … | Abre Reopen with encoding e Convert to encoding (seção 10) |
 | Indentação | Tabs, ou espaços e quantos, como detectado no arquivo | Muda a indentação |
 | Linha:Coluna | A posição do cursor | |
 | OVR | Modo de sobrescrever ligado (tecla Insert) | Desliga |
@@ -487,8 +487,13 @@ C99 do próprio editor.
 
 Dentro do editor o texto é UTF-8.  Um arquivo em outra codificação é
 decodificado na leitura e codificado de novo ao salvar.  Codificações
-suportadas: UTF-8, UTF-8 com BOM, UTF-16 LE, UTF-16 BE, Windows-1252,
-ISO-8859-1 e ISO-8859-15.
+convertidas pelo próprio editor: UTF-8, UTF-8 com BOM, UTF-16 LE, UTF-16 BE,
+Windows-1252, ISO-8859-1 e ISO-8859-15.  O resto da lista (UTF-16 e
+UTF-32 com BOM, UTF-7, as outras ISO-8859, as code pages do Windows, da
+IBM e do Mac, KOI8, Shift_JIS, EUC-JP, ISO-2022-JP, HZ, GB18030, GBK, Big5,
+EUC-KR, …) também é convertido pelo editor, por tabelas que ficam no
+código-fonte (`src/core/enc_data.c`): nenhuma biblioteca é necessária.
+Essas nunca são detectadas: só podem ser escolhidas.
 
 Como a codificação é detectada ao abrir um arquivo:
 
@@ -497,18 +502,30 @@ Como a codificação é detectada ao abrir um arquivo:
    BOM;
 3. senão UTF-8, se os bytes forem UTF-8 válido (num arquivo de 32 MB ou
    mais, os primeiros 64 KB são verificados);
-4. senão Windows-1252, ou ISO-8859-1 quando nenhum byte está entre 80h e
+4. senão, pelos primeiros 64 KB, japonês (Shift_JIS, EUC-JP), chinês
+   (GB18030, Big5), coreano (EUC-KR) ou cirílico (windows-1251, KOI8-R,
+   IBM866): os bytes precisam ser válidos nela, e os caracteres que dão
+   precisam ser os mais usados da língua (kana, os hanzi ou hangul mais
+   frequentes, as letras mais frequentes do russo).  Um texto de poucos
+   caracteres pode não ser reconhecido;
+5. senão Windows-1252, ou ISO-8859-1 quando nenhum byte está entre 80h e
    9Fh.  ISO-8859-15 nunca é adivinhada; só pode ser escolhida.
 
 Um arquivo aberto e salvo sem alterações é gravado byte a byte igual,
 em qualquer codificação.
 
 A codificação aparece na barra de status.  O botão dela, ou File >
-Encoding…, abre uma lista com duas ações:
+Encoding…, abre um popup com duas ações:
 
-- **Save with**: o próximo salvamento grava nessa codificação;
-- **Reopen with**: relê o arquivo nessa codificação (só quando não há
-  alterações não salvas).
+- **Reopen with encoding…**: relê o arquivo na codificação escolhida
+  (só quando não há alterações não salvas);
+- **Convert to encoding…**: mantém o texto, e o próximo salvamento grava
+  na codificação escolhida.
+
+Cada uma abre a lista das codificações, com a atual escolhida.  Digitar
+em **Find:** filtra a lista (busca aproximada, como no Alt+P); as setas
+escolhem, e Enter ou um clique duplo aplica; Esc fecha.  Um documento sem
+nome não tem o que reler: a lista abre direto, para converter.
 
 Se o texto tem um caractere que uma codificação de 8 bits não
 representa, o salvamento não grava nada: o caractere fica selecionado e

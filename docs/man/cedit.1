@@ -103,7 +103,7 @@ and the underlined letter or with
 Below it are the text area with its line numbers and scrollbars, the
 Find bar when it is open, and the status bar.
 The status bar shows the language, the line endings (LF or CRLF; a
-click switches them), the encoding (a click opens the encoding list),
+click switches them), the encoding (a click opens Reopen and Convert),
 the indentation (a click changes it), the line and column, OVR in
 overtype mode, an asterisk when there are unsaved changes, the project
 folder (a click opens Open Project Folder) and the file name (a click
@@ -402,13 +402,23 @@ closes.
 No external program is run.
 .Sh ENCODINGS
 The editor reads and writes UTF-8, UTF-8 with a BOM, UTF-16 LE and BE,
-Windows-1252, ISO-8859-1 and ISO-8859-15.
-When a file is opened its encoding is guessed: a BOM; else UTF-16 from
-its zero bytes; else UTF-8 if it is valid UTF-8; else Windows-1252, or
-ISO-8859-1 when no byte is in 80h\(en9Fh.
+Windows-1252, ISO-8859-1 and ISO-8859-15 itself, and the many others of
+its list (UTF-32, UTF-7, the ISO-8859 family, the code pages of Windows,
+IBM and the Mac, Shift_JIS, EUC-JP, GB18030, Big5, EUC-KR, ...) from
+tables in its sources, with no library; those are never guessed, only
+chosen.
+When a file is opened its encoding is guessed: a BOM; else UTF-16 from its
+zero bytes; else UTF-8 if it is valid UTF-8; else Japanese, Chinese,
+Korean or Cyrillic, from the characters its first 64 KB give; else
+Windows-1252, or ISO-8859-1 when no byte is in 80h\(en9Fh.
 A file read and written back is the same bytes.
-The encoding button of the status bar, or File > Encoding, chooses the
-encoding to save with, or reopens the file in another one.
+The encoding button of the status bar, or File > Encoding, offers
+.Cm Reopen with encoding
+(the file read again in another encoding) and
+.Cm Convert to encoding
+(the next save writes it); each opens the list of the encodings,
+narrowed by what is typed in
+.Cm Find: .
 A character that an 8-bit encoding does not have stops the save, and
 is selected.
 .Sh LARGE FILES

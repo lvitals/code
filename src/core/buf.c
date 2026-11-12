@@ -737,7 +737,7 @@ enum { L_RETRY = -1 };	/* not UTF-8 after all: read again */
 static int
 feed(struct ld *L, const char *in, pos_t n, int last)
 {
-	static char dbuf[3 * CHUNK + 8], obuf[3 * CHUNK + 8];
+	static char dbuf[DEC_ROOM(CHUNK)], obuf[DEC_ROOM(CHUNK)];
 	pos_t o;
 
 	if(L->check && !u8_check(&L->u, in, n, last))
@@ -855,8 +855,11 @@ load_map(char *m, pos_t size, int enc)
 	memset(&L, 0, sizeof L);
 	pick(&L, m, s, enc, &skip);
 	if(L.check && !u8_check(&L.u, m, s, s == size)) {
-		L.d.enc = ENC_CP1252;
-		L.guess8 = 1;
+		/* CJK, Cyrillic: from its first bytes; else an 8-bit one */
+		if((L.d.enc = enc_detect(m, s)) == ENC_AUTO) {
+			L.d.enc = ENC_CP1252;
+			L.guess8 = 1;
+		}
 	}
 	if(ISUTF8(L.d.enc)) {
 		B->enc = (char)L.d.enc;
@@ -901,9 +904,10 @@ load_read(int h, int enc, int guess8)
 int
 buf_load(const char *name, int enc)
 {
+	static char sample[SAMPLE];
 	pos_t size = POS_NONE;
 	char *m;
-	int h, r;
+	int h, r, n, e;
 
 	h = file_open(name, 0);
 	if(h < 0)
@@ -919,11 +923,17 @@ buf_load(const char *name, int enc)
 	}
 	r = load_read(h, enc, 0);
 	file_close(h);
-	if(r == L_RETRY) {	/* not UTF-8: an 8-bit encoding */
+	if(r == L_RETRY) {	/* not UTF-8: CJK, Cyrillic (from its first
+				   bytes); else an 8-bit encoding of the West */
 		buf_free();
 		if((h = file_open(name, 0)) < 0)
 			return B_NOFILE;
-		r = load_read(h, ENC_CP1252, 1);
+		n = file_read(h, sample, (int)sizeof sample);
+		file_close(h);
+		e = n > 0 ? enc_detect(sample, (pos_t)n) : ENC_AUTO;
+		if((h = file_open(name, 0)) < 0)
+			return B_NOFILE;
+		r = load_read(h, e == ENC_AUTO ? ENC_CP1252 : e, e == ENC_AUTO);
 		file_close(h);
 	}
 	detect();
@@ -1001,13 +1011,17 @@ unencodable(int e)
 {
 	pos_t i = 0, len = B->len;
 	struct u8check u;
-	char s[4];
+	char s[4], ascii[128];
 	unsigned c;
 	unsigned long cp;
 	int n, k;
 
+	for(k = 0; k < 128; k++)	/* not all of ASCII is in each (EBCDIC) */
+		ascii[k] = (char)(!ENC_EXT(e) || enc_has(e, (unsigned long)k));
 	while(i < len) {
 		if((c = (unsigned)BCH(i)) < 0x80) {
+			if(!ascii[c])
+				return i;
 			i++;
 			continue;
 		}
@@ -1045,6 +1059,12 @@ buf_save(const char *name)
 	nb = B->nobom ? 0 : enc_bom(B->enc, &bom);
 	ok = nb == 0 || file_write(h, bom, nb) == nb;
 	ok = ok && save_tree(h, B->root);
+	{	/* the end of a stateful one (ISO-2022-JP, UTF-7, HZ) */
+		char end[16];
+		int ne = (int)enc_end(&E, end);
+
+		ok = ok && (ne == 0 || file_write(h, end, ne) == ne);
+	}
 	if(file_close(h) < 0)
 		ok = 0;
 	if(!ok)

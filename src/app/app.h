@@ -64,14 +64,16 @@ enum {
 	ID_NONE, ID_EDITOR, ID_MENU,
 	ID_FIND, ID_REPLACE, ID_CASE, ID_WORD, ID_REGEX, ID_REPLALL, ID_CLOSE,
 	ID_ST_NL, ID_ST_ENC, ID_ST_INDENT, ID_ST_PROJECT, ID_ST_FILE, ID_ST_OVR,
-	ID_IND_TYPE, ID_IND_WIDTH, ID_ENC_LIST, ID_ENC_SAVE, ID_ENC_REOPEN,
+	ID_IND_TYPE, ID_IND_WIDTH, ID_ENC_CONVERT, ID_ENC_REOPEN,
 	ID_OK, ID_YES, ID_NO, ID_CANCEL, ID_GOTO, ID_LIST, ID_G_CLOSE,
-	ID_P_NAME, ID_P_LIST, ID_P_SUGGEST, ID_P_HIDDEN, ID_P_FOLDER, ID_P_NEWDIR, ID_P_TRASH, ID_P_CLOSE, ID_FILTER, ID_FINDER
+	ID_P_NAME, ID_P_LIST, ID_P_SUGGEST, ID_P_HIDDEN, ID_P_FOLDER, ID_P_NEWDIR, ID_P_TRASH, ID_P_CLOSE, ID_FILTER, ID_FINDER,
+	ID_ENC_FIND, ID_ENC_LIST
 };
 
 enum { SEARCH_HIDDEN, SEARCH_FIND, SEARCH_REPLACE };
 enum { PICK_NONE, PICK_OPEN, PICK_SAVEAS, PICK_FOLDER };
 enum { FINDER_NONE, FINDER_FILES, FINDER_TEXT };	/* st.finder */
+enum { ENCD_NONE, ENCD_REOPEN, ENCD_CONVERT };	/* st.enc_dialog */
 
 struct state {
 	int search, search_focus;
@@ -92,7 +94,9 @@ struct state {
 
 	char wants_save, wants_close, wants_exit, wants_goto, wants_about;
 	char wants_gotofile, wants_indent, wants_status, wants_filter;
-	char wants_enc;		/* the encoding picker is open */
+	char wants_enc;		/* the popup of the encoding is open */
+	char enc_dialog;	/* the list of the encodings: ENCD_REOPEN, ENCD_CONVERT */
+	struct edl enc_needle;	/* what it is narrowed to (Find:) */
 	char finder;		/* the project finder: FINDER_FILES, FINDER_TEXT */
 	char wants_reload;	/* the file changed on the disk: read it again? */
 	struct edl gototarget;
@@ -255,6 +259,7 @@ extern char bar_stale;
 extern pos_t cur_line, cur_lstart;
 void draw_indent_picker(int y);
 void draw_enc_picker(int y);
+void draw_enc_dialog(void);
 
 /* dialogs.c */
 int wrap_text(int x, int y, int w, const char *s, int at);

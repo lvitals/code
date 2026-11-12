@@ -224,7 +224,7 @@ doc_save(const char *path)
 		strcpy(msg, "Line ");
 		udec(msg + strlen(msg), buf_lineno(at) + 1);
 		strcat(msg, " has a character not in ");
-		strcat(msg, enc_names[(int)B->enc]);
+		strcat(msg, enc_name(B->enc));
 		strcat(msg, " (selected), not saved: ");
 		error(msg, path);
 		jump_push();
@@ -259,7 +259,8 @@ doc_reload(const char *path)
 			int was = d->b.enc;
 
 			B = &d->b;
-			r = buf_load(path, ENC_AUTO);
+			/* one of the others chosen stays: it is never guessed */
+			r = buf_load(path, ENC_EXT(was) ? was : ENC_AUTO);
 			/* an 8-bit one chosen stays: they cannot be told apart */
 			if(r == B_OK && ENC_8BIT(was) && ENC_8BIT(B->enc) && B->enc != was)
 				r = buf_load(path, was);
@@ -587,7 +588,7 @@ static int
 modal_open(void)
 {
 	return st.wants_close || st.wants_goto || st.picker || st.wants_gotofile ||
-	    st.wants_about || st.wants_filter || st.wants_reload || st.finder || st.nerr;
+	    st.wants_about || st.wants_filter || st.wants_reload || st.finder || st.enc_dialog || st.nerr;
 }
 
 
@@ -595,7 +596,7 @@ static int
 draw(kcode key)
 {
 	int sh = st.search == SEARCH_REPLACE ? 3 : st.search == SEARCH_FIND ? 2 : 0, a;
-	kcode menukey;
+	kcode menukey, popkey;
 
 	static char over;	/* a menu or a modal was over the text */
 
@@ -623,6 +624,13 @@ draw(kcode key)
 		menukey = ui_key;
 		ui_key = 0;
 	}
+	/* so too a popup of the status bar (the encoding, the indentation):
+	   a click on its buttons is its own, one elsewhere closes it */
+	popkey = 0;
+	if((st.wants_enc || st.wants_indent) && ui_key == K_MOUSE) {
+		popkey = ui_key;
+		ui_key = 0;
+	}
 	if(sh)
 		draw_search(1);
 	if(st.search == SEARCH_HIDDEN)
@@ -639,6 +647,8 @@ draw(kcode key)
 	if(drawing || (ui_focus >= ID_ST_NL && ui_focus <= ID_ENC_REOPEN) ||
 	   (ui_key == K_MOUSE && term_mouse.y == scr_rows - 1))
 		draw_statusbar(scr_rows - 1);	/* else it shows nothing new */
+	if(popkey)
+		ui_key = popkey;
 	draw_indent_picker(scr_rows - 1);
 	draw_enc_picker(scr_rows - 1);
 	if(menukey)
@@ -657,6 +667,8 @@ draw(kcode key)
 		draw_filter();
 	if(st.finder)
 		draw_finder();
+	if(st.enc_dialog)
+		draw_enc_dialog();
 	if(st.wants_reload)
 		draw_reload();
 	if(st.picker)

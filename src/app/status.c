@@ -1,11 +1,12 @@
 /* The status bar: the language, the newlines (a
  * button that switches them), the encoding (a button that opens its
- * picker: the one a save writes, or the file read again in another),
+ * popup: Reopen with encoding, Convert to encoding),
  * the indentation (a button that opens its picker), the project (a
  * button: Open Project Folder), the line and column, OVR, the * of a changed
  * text and the name of the file (a button: Go to File). */
+#include <stdlib.h>
 #include <string.h>
-#include "app.h"
+#include "finder.h"
 
 static int indentx;		/* where the indentation button is */
 static int encx;		/* where the encoding button is */
@@ -115,7 +116,7 @@ draw_statusbar(int y)
 		static int l_bits;
 		static unsigned l_project;
 		int bits = B->crlf | B->tabs << 1 | D->overtype << 2 | buf_dirty(B) << 3 |
-		    B->tabsize << 4 | B->enc << 8 | ndocs << 11;
+		    B->tabsize << 4 | B->enc << 8 | ndocs << 15;
 
 		int same = !bar_stale && !st.wants_status && bits == l_bits &&
 		    ui_focus == lastfocus && !(ui_focus >= ID_ST_NL && ui_focus <= ID_ST_OVR) &&
@@ -175,7 +176,7 @@ draw_statusbar(int y)
 	in = room >= iw;
 	if(in)
 		room -= iw;
-	strcpy(enc, enc_names[(int)B->enc]);
+	strcpy(enc, enc_name(B->enc));
 	en = room >= (w = text_width(enc) + 2 + gap);
 	if(en)
 		room -= w;
@@ -345,53 +346,82 @@ draw_indent_picker(int y)
 	}
 }
 
-static const char *
-enc_item(int i)
+/* --- the encoding ----------------------------------------------------------
+ *
+ * Its button opens a popup over it with two actions; each opens the list
+ * of the encodings (Find: narrows it, a fuzzy match), and the one chosen
+ * is applied:
+ *
+ *   Reopen with encoding   the file read again in it (a file saved, with
+ *                          no changes)
+ *   Convert to encoding    the text kept, written in it at the next save
+ *
+ * An untitled document has nothing to read again: no popup, the list of
+ * Convert opens at once. */
+
+#define ENC_REOPEN_T	"Reopen with encoding" DOTS
+#define ENC_CONVERT_T	"Convert to encoding" DOTS
+
+static void
+enc_dialog_open(int kind)
 {
-	return enc_names[i];
+	st.wants_enc = 0;
+	st.enc_dialog = (char)kind;
+	edl_set(&st.enc_needle, "");
+	ui_steal(ID_ENC_FIND);
+	ui_again = 1;
 }
 
-/* the encoding: the one the next save writes, or the file read again
- * in it (a popup over the bar) */
+/* the popup over the bar: the two actions (an untitled document: none,
+ * the list of Convert at once) */
 void
 draw_enc_picker(int y)
 {
-	int x = encx, top = 0, h = ENC_N, in, done = 0, r;
+	int w = text_width(ENC_REOPEN_T) + 6, x = encx, in, up, down;
 
 	static char shown;
-	static int sel;
 
 	if(!st.wants_enc || docs == 0) {
 		st.wants_enc = shown = 0;
 		return;
 	}
-	if(x + 25 > scr_cols)
-		x = scr_cols - 25;
+	if(D->path == 0) {	/* untitled: nothing to read again */
+		shown = 0;
+		enc_dialog_open(ENCD_CONVERT);
+		return;
+	}
+	if(x + w > scr_cols)
+		x = scr_cols - w;
 	if(x < 0)
 		x = 0;
 	ui_well_begin(0);
-	if(!shown) {
-		ui_steal(ID_ENC_LIST);
-		sel = B->enc;
-	}
+	if(!shown)
+		ui_steal(ID_ENC_REOPEN);
 	shown = 1;
-	scr_fill(x, y - h - 4, x + 24, y - 1, ' ', S_FLOAT);
-	scr_frame(x, y - h - 4, x + 24, y - 1, S_FLOAT);
-	r = ui_list(ID_ENC_LIST, x + 2, y - h - 3, 21, h, ENC_N, enc_item, &sel, &top);
-	if(ui_button(ID_ENC_SAVE, x + 2, y - 2, "Save with", 'S', S_FLOAT) || r == 2) {
-		if(B->enc != sel) {	/* written so at the next save */
-			B->enc = (char)sel;
-			B->nobom = 0;
-			buf_touch();
-		}
-		done = 1;
+	/* Up and Down from one to the other, as Tab does */
+	up = ui_key == K_UP && ui_focus == ID_ENC_CONVERT;
+	down = ui_key == K_DOWN && ui_focus == ID_ENC_REOPEN;
+	if(up || down) {
+		ui_key = 0;
+		ui_steal(up ? ID_ENC_REOPEN : ID_ENC_CONVERT);
+		ui_again = 1;
 	}
-	if(ui_button(ID_ENC_REOPEN, x + 14, y - 2, "Reopen", 'R', S_FLOAT)) {
-		doc_reopen(sel);
-		done = 1;
+	scr_fill(x, y - 4, x + w - 1, y - 1, ' ', S_FLOAT);
+	scr_frame(x, y - 4, x + w - 1, y - 1, S_FLOAT);
+	if(ui_button(ID_ENC_REOPEN, x + 2, y - 3, ENC_REOPEN_T, 0, S_FLOAT)) {
+		shown = 0;
+		enc_dialog_open(ENCD_REOPEN);
+		ui_well_end();
+		return;
+	}
+	if(ui_button(ID_ENC_CONVERT, x + 2, y - 2, ENC_CONVERT_T, 0, S_FLOAT)) {
+		shown = 0;
+		enc_dialog_open(ENCD_CONVERT);
+		ui_well_end();
+		return;
 	}
 	in = ui_well_end();
-	if(done || (in && (ui_key == 13 || ui_key == 27))) {
+	if(in && ui_key == 27) {
 		ui_key = 0;
 		st.wants_enc = shown = 0;
 		bar_stale = 1;
@@ -399,6 +429,139 @@ draw_enc_picker(int y)
 		ui_again = 1;
 	} else if(!in || (ui_key == K_MOUSE && term_mouse.kind == M_PRESS)) {
 		st.wants_enc = shown = 0;	/* the focus went: it closes */
+		ui_again = 1;
+	}
+}
+
+static int eall[ENC_LIST_MAX], nall;	/* the encodings that can be chosen */
+static int erow[ENC_LIST_MAX], nerow, escore[ENC_LIST_MAX];
+
+static int
+by_escore(const void *a, const void *b)
+{
+	int x = *(const int *)a, y = *(const int *)b;
+
+	if(escore[x] != escore[y])
+		return escore[x] > escore[y] ? -1 : 1;
+	return x - y;	/* as listed */
+}
+
+/* the rows: all (indexes of eall), or those Find: matches, the best
+ * first */
+static void
+enc_rows(void)
+{
+	const char *name;
+	int i;
+
+	if(nall == 0)
+		nall = enc_list(eall, ENC_LIST_MAX);
+	nerow = 0;
+	st.enc_needle.s[st.enc_needle.len] = 0;
+	if(st.enc_needle.len == 0 || !fz_set(st.enc_needle.s)) {
+		for(i = 0; i < nall; i++)
+			erow[nerow++] = i;
+		return;
+	}
+	for(i = 0; i < nall; i++) {
+		name = enc_name(eall[i]);
+		if((escore[i] = fz_score(name, (int)strlen(name))) >= 0)
+			erow[nerow++] = i;
+	}
+	qsort(erow, (size_t)nerow, sizeof *erow, by_escore);
+}
+
+static const char *
+enc_row(int r)
+{
+	return enc_name(eall[erow[r]]);
+}
+
+/* the list of the encodings, for Reopen or Convert (a modal as wide as
+ * the screen but 20 columns, as high but 10 rows: as edit has it) */
+void
+draw_enc_dialog(void)
+{
+	int lw = scr_cols - 20, lh = scr_rows - 10, x, y, fw = 6, pick = -1, done = 0, e;
+	kcode k;
+
+	static char shown;
+	static int sel, top;
+
+	if(docs == 0) {
+		st.enc_dialog = shown = 0;
+		return;
+	}
+	if(lw < 10)
+		lw = 10;
+	if(lw > scr_cols - 2)
+		lw = scr_cols - 2;
+	if(lh < 10)
+		lh = 10;
+	if(lh > scr_rows - 5)
+		lh = scr_rows - 5 < 1 ? 1 : scr_rows - 5;
+	if(!shown) {	/* the current one chosen */
+		enc_rows();
+		for(sel = 0; sel < nerow && eall[erow[sel]] != B->enc; sel++)
+			;
+		if(sel >= nerow)
+			sel = 0;
+		top = sel >= lh ? sel - lh / 2 : 0;
+		ui_steal(ID_ENC_FIND);
+	}
+	shown = 1;
+	ui_modal_begin(st.enc_dialog == ENCD_REOPEN ? ENC_REOPEN_T : ENC_CONVERT_T,
+	    lw + 2, lh + 3, S_FLOAT, &x, &y);
+	/* a character typed in the list: to Find:; the keys of the list from
+	   Find: too */
+	k = ui_key;
+	if(ui_focus == ID_ENC_LIST && k >= ' ' && k < 0x110000 && k != 127)
+		ui_steal(ID_ENC_FIND);
+	if(ui_focus == ID_ENC_FIND && nerow) {
+		if(k == K_UP || k == (K_CTRL | 'P'))
+			sel = sel ? sel - 1 : nerow - 1;
+		else if(k == K_DOWN || k == (K_CTRL | 'N'))
+			sel = sel + 1 < nerow ? sel + 1 : 0;
+		else if(k == K_PGUP)
+			sel = sel > lh - 1 ? sel - (lh - 1) : 0;
+		else if(k == K_PGDN)
+			sel = sel + lh - 1 < nerow ? sel + lh - 1 : nerow - 1;
+		else if(k == 13)
+			pick = sel;
+		else
+			k = 0;
+		if(k) {
+			ui_key = 0;
+			ui_again = 1;
+		}
+	}
+	scr_text(x + 1, y + 1, "Find:", S_FLOAT, x + 1 + fw);
+	if(ui_edit(ID_ENC_FIND, x + 1 + fw, y + 1, lw - fw, &st.enc_needle, S_FLOAT)) {
+		enc_rows();
+		sel = top = 0;
+	}
+	if(ui_list(ID_ENC_LIST, x + 1, y + 2, lw, lh, nerow, enc_row, &sel, &top) == 2)
+		pick = sel;
+	if(nerow == 0)
+		scr_text(x + 3, y + 2, "No encoding matches", S_LIST | F_DIM, x + lw);
+	if(ui_modal_end())
+		done = 1;
+	if(pick >= 0 && pick < nerow) {
+		e = eall[erow[pick]];
+		if(st.enc_dialog == ENCD_REOPEN)
+			doc_reopen(e);
+		else if(B->enc != e) {	/* written so at the next save */
+			B->enc = (char)e;
+			B->nobom = 0;
+			buf_touch();
+		}
+		done = 1;
+	}
+	if(done) {
+		st.enc_dialog = shown = 0;
+		edl_set(&st.enc_needle, "");
+		bar_stale = 1;
+		ui_steal(ID_EDITOR);
 		ui_again = 1;
 	}
 }

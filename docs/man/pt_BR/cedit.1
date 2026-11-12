@@ -408,13 +408,23 @@ fecha.
 Nenhum programa externo é executado.
 .Sh CODIFICAÇÕES
 O editor lê e grava UTF-8, UTF-8 com BOM, UTF-16 LE e BE, Windows-1252,
-ISO-8859-1 e ISO-8859-15.
-Ao abrir um arquivo, a codificação é detectada: um BOM; senão UTF-16,
-pelos bytes zero; senão UTF-8, se for UTF-8 válido; senão Windows-1252,
-ou ISO-8859-1 quando nenhum byte está entre 80h e 9Fh.
+ISO-8859-1 e ISO-8859-15 por conta própria, e as muitas outras da lista
+(UTF-32, UTF-7, a família ISO-8859, as code pages do Windows, da IBM e
+do Mac, Shift_JIS, EUC-JP, GB18030, Big5, EUC-KR, ...) por tabelas no
+próprio código, sem biblioteca; essas nunca são detectadas, só
+escolhidas.
+Ao abrir um arquivo, a codificação é detectada: um BOM; senão UTF-16, pelos
+bytes zero; senão UTF-8, se for UTF-8 válido; senão japonês, chinês,
+coreano ou cirílico, pelos caracteres dos primeiros 64 KB; senão
+Windows-1252, ou ISO-8859-1 quando nenhum byte está entre 80h e 9Fh.
 Um arquivo lido e gravado de volta fica byte a byte igual.
-O botão de codificação da barra de status, ou File > Encoding, escolhe
-a codificação com que salvar, ou reabre o arquivo em outra.
+O botão de codificação da barra de status, ou File > Encoding, abre
+.Cm Reopen with encoding
+(relê o arquivo em outra codificação) e
+.Cm Convert to encoding
+(o próximo salvamento grava nela); cada um abre a lista das
+codificações, filtrada pelo que se digita em
+.Cm Find: .
 Um caractere que uma codificação de 8 bits não tem impede o
 salvamento, e fica selecionado.
 .Sh ARQUIVOS GRANDES

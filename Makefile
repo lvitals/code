@@ -6,6 +6,9 @@
 #   make cedit      the terminal one alone (no GLFW needed)
 #   make xcedit     the window one
 #   make icon       data/xcedit.svg, from src/platform/icon.h (tools/icon-svg.c)
+#   make enc-tables src/core/enc_data.c, the tables of the encodings, from
+#                   the iconv of glibc (tools/enc-tables.c): only to make
+#                   them again; the editor needs no iconv
 #   make install    into $(PREFIX) (/usr/local; PREFIX=~/.local for a user),
 #                   with the manual pages, the menu entry and the icon of
 #                   xcedit; DESTDIR too
@@ -47,7 +50,8 @@ GUI_CFLAGS = `sh tools/gui-flags --cflags`
 GUI_LIBS   = `sh tools/gui-flags --libs`
 
 # the editor, then its two faces: cedit (a terminal) and xcedit (a window)
-CORE = src/core/mem.o src/core/buf.o src/core/enc.o src/core/regex.o \
+CORE = src/core/mem.o src/core/buf.o src/core/enc.o src/core/enc_data.o \
+	src/core/regex.o \
 	src/tui/screen.o src/tui/ui.o src/tui/uilist.o \
 	src/app/main.o src/app/start.o src/app/editor.o src/app/menu.o \
 	src/app/menus.o src/app/status.o src/app/complete.o src/app/finder.o \
@@ -123,7 +127,7 @@ LANGS = src/app/langs/actionscript.o src/app/langs/ada.o \
 TERM   = src/platform/posix/term.o
 WINDOW = src/platform/glfw/gui.o
 HDRS = src/app/app.h src/app/finder.h src/app/lang_def.h src/app/langs/all.h \
-	src/app/syntax.h src/core/buf.h src/core/enc.h src/core/mem.h \
+	src/app/syntax.h src/core/buf.h src/core/enc.h src/core/enc_data.h src/core/mem.h \
 	src/core/regex.h src/platform/colours.h src/platform/icon.h \
 	src/platform/platform.h src/tui/screen.h src/tui/ui.h
 
@@ -167,6 +171,15 @@ build/xcedit: $(CORE) $(LANGS) $(WINDOW) src/platform/glfw/stb.o build/font.o
 # the icon, from its data (as tools/mascot-svg.c of inkaur): in the
 # sources, made again when its data or its tool change
 icon: data/xcedit.svg
+
+# the tables of the encodings beyond the editor's own, in the sources:
+# made again from the iconv of glibc (only this needs it; the editor not)
+enc-tables: build/enc-tables
+	build/enc-tables > src/core/enc_data.c
+
+build/enc-tables: tools/enc-tables.c src/core/enc_data.h
+	mkdir -p build
+	$(CC) $(WFLAGS) $(CFLAGS) -o $@ tools/enc-tables.c
 
 build/icon-svg: tools/icon-svg.c src/platform/icon.h
 	mkdir -p build
@@ -223,4 +236,4 @@ clean:
 	rm -f $(CORE) $(LANGS) $(TERM) $(WINDOW) src/platform/glfw/stb.o
 	rm -rf build
 
-.PHONY: all cedit xcedit icon install uninstall man-lint check-langs clean
+.PHONY: all cedit xcedit icon enc-tables install uninstall man-lint check-langs clean
