@@ -264,19 +264,22 @@ void
 draw_gotofile(void)
 {
 	static int sel, top;
-	int w = scr_cols - 20, h = scr_rows - 10, x, y;
+	int w = scr_cols - 20, h = scr_rows - 11, x, y, cx;
 
 	if(w < 10)
 		w = scr_cols < 10 ? scr_cols : 10;
 	if(h < 3)
 		h = 3;
-	ui_modal_begin("Go to File" DOTS, w + 2, h + 2, S_FLOAT, &x, &y);
+	/* the list and, under it, [Close] in the corner */
+	ui_modal_begin("Go to File" DOTS, w + 2, h + 3, S_FLOAT, &x, &y);
 	if(ui_list(ID_LIST, x + 1, y + 1, w, h, ndocs, doc_item, &sel, &top) == 2) {
 		doc_activate(nthdoc(sel));
 		st.wants_gotofile = 0;
 		sel = top = 0;
 	}
-	if(ui_modal_end()) {
+	cx = x + w - 1 - text_width("Close") - 1;
+	if((cx >= x + 1 && ui_button(ID_G_CLOSE, cx, y + h + 1, "Close", 0, S_FLOAT)) |
+	    ui_modal_end()) {
 		st.wants_gotofile = 0;
 		sel = top = 0;
 	}
