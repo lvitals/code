@@ -683,7 +683,9 @@ draw_browse(int w, int h)
 	    x + w - 2);
 	if(ui_check(ID_P_HIDDEN, x + 2, y + h - 2, "Hidden (Alt+H)", &st.phidden, S_FLOAT))
 		hidden_changed();
-	/* the buttons, from the right: [Close] in the corner */
+	/* the buttons, from the right: [Close] in the corner; before it
+	   [Open This Folder] (Open Project Folder) or [Open] (Open File: as
+	   Enter, the one chosen opened, or gone into) */
 	cx = close_at(x + 2 + text_width("Hidden (Alt+H)") + 7, x + w - 3);
 	bx = cx;
 	if(folders) {
@@ -691,6 +693,14 @@ draw_browse(int w, int h)
 		if(ui_button(ID_P_FOLDER, bx, y + h - 2, "Open This Folder", 0, S_FLOAT)) {
 			act = 2;	/* the folder shown */
 			row = -2;
+		}
+	} else {
+		bx = cx - 3 - text_width("Open") - 1;
+		if(ui_button(ID_P_OPEN, bx, y + h - 2, "Open", 0, S_FLOAT) && !making) {
+			act = 1;
+			row = fsel;
+			ui_steal(ID_P_NAME);	/* a folder gone into: the search,
+						   as after Enter */
 		}
 	}
 	manage_buttons(x + 2 + text_width("Hidden (Alt+H)") + 7, bx - 3, y + h - 2, S_FLOAT);
@@ -731,7 +741,7 @@ draw_picker(void)
 	char path[PATH_MAX_ + 2];
 	int w = scr_cols >= 60 ? scr_cols - 20 : scr_cols - 2, h = scr_rows - 10;
 	int x, y, act = 0, lw = 12, r, done = 0, over;
-	int tw, cx;
+	int tw, cx, sx;
 	kcode k;
 
 	if(w < 10)
@@ -787,12 +797,17 @@ draw_picker(void)
 	}
 	r = ui_list(ID_P_LIST, x + 1, y + 3, w - 2, h - 5, nents, ent, &sel, &top);
 	/* under the list, one row: the hidden files, shown or not (in line
-	   with Folder: and File name:), the two buttons, [Close] in the corner */
+	   with Folder: and File name:), the two buttons, [Save] (as Enter in
+	   the name), [Close] in the corner */
 	if(ui_check(ID_P_HIDDEN, x + 2, y + h - 2, "Hidden Files (Ctrl+H)", &st.phidden, S_FLOAT))
 		hidden_changed();
 	cx = close_at(x + 2 + text_width("Hidden Files (Ctrl+H)") + 7, x + w - 3);
-	manage_buttons(x + 2 + text_width("Hidden Files (Ctrl+H)") + 7, cx - 3, y + h - 2,
+	sx = cx - 3 - text_width("Save") - 1;
+	manage_buttons(x + 2 + text_width("Hidden Files (Ctrl+H)") + 7, sx - 3, y + h - 2,
 	    S_FLOAT);
+	if(sx > x + 2 + text_width("Hidden Files (Ctrl+H)") + 7 &&
+	   ui_button(ID_P_SAVE, sx, y + h - 2, "Save", 0, S_FLOAT) && !making)
+		act = 1;
 	if(close_button(cx, x + w - 3, y + h - 2))
 		done = 1;
 	if(r == 2 && !making)
